@@ -18,4 +18,4 @@ curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash
 
 ## License
 
-© Aviary Inc. All rights reserved. Use is subject to [Aviary Inc Terms of Service](https://cloudglue.dev/terms).
+© Aviary Inc. (d/b/a Cloudglue). All rights reserved. Use is subject to [Aviary Inc. Terms of Service](https://cloudglue.dev/terms).
