@@ -1,4 +1,4 @@
-# tinycloud
+# Tinycloud
 
 Minimal agentic CLI for working with video files and code. Powered by [Cloudglue](https://cloudglue.dev).
 
@@ -13,7 +13,7 @@ npm install -g @cloudglue/tinycloud
 ### curl
 
 ```bash
-curl -fsSL https://media.cloudglue.dev/tinycloud-dist/install.sh | bash
+curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash
 ```
 
 ## License
