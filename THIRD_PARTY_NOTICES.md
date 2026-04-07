@@ -24,11 +24,6 @@ This file lists third-party software included in or used by Tinycloud, along wit
 - License: MIT
 - https://github.com/chalk/chalk
 
-## @cloudglue/cloudglue-js
-- Version: 0.7.6
-- License: Apache-2.0
-- https://github.com/cloudglue/cloudglue-js
-
 ## @mariozechner/pi-agent-core
 - Version: 0.55.3
 - License: MIT
