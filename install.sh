@@ -117,27 +117,3 @@ else
   echo "Error: Installation failed"
   exit 1
 fi
-
-# --- Check for ffmpeg ---
-if ! command -v ffmpeg &>/dev/null; then
-  echo ""
-  echo "Note: ffmpeg is required for video processing features."
-  case "$PLATFORM_OS" in
-    darwin)
-      if command -v brew &>/dev/null; then
-        echo "  Install via: brew install ffmpeg"
-      else
-        echo "  Install from: https://ffmpeg.org/download.html"
-      fi
-      ;;
-    linux)
-      if command -v apt-get &>/dev/null; then
-        echo "  Install via: sudo apt install ffmpeg"
-      elif command -v dnf &>/dev/null; then
-        echo "  Install via: sudo dnf install ffmpeg"
-      else
-        echo "  Install from: https://ffmpeg.org/download.html"
-      fi
-      ;;
-  esac
-fi
