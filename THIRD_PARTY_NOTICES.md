@@ -8,17 +8,6 @@ This file lists third-party software included in or used by Tinycloud, along wit
 - https://bun.sh
 - https://github.com/oven-sh/bun
 
-## FFmpeg (via ffmpeg-static)
-- Version: 5.3.0 (bundled binary)
-- License: GPL-3.0-or-later
-- https://ffmpeg.org
-- https://github.com/eugeneware/ffmpeg-static
-
-## ffprobe-static
-- Version: 3.1.0
-- License: MIT
-- https://github.com/joshwnj/ffprobe-static
-
 ## chalk
 - Version: 5.6.2
 - License: MIT
