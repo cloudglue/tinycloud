@@ -1,11 +1,11 @@
 #!/bin/bash
-# Install tinycloud
+# Install Tinycloud
 #
 # Usage:
-#   curl -fsSL https://media.cloudglue.dev/tinycloud-dist/install.sh | bash
+#   curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash
 #
 # Install a specific version:
-#   curl -fsSL https://media.cloudglue.dev/tinycloud-dist/install.sh | bash -s -- v0.1.2
+#   curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash -s -- v0.1.2
 
 set -euo pipefail
 
@@ -39,10 +39,10 @@ PLATFORM="${PLATFORM_OS}-${PLATFORM_ARCH}"
 
 if [ -n "$VERSION" ]; then
   TARBALL="tinycloud-${PLATFORM}-${VERSION}.tar.gz"
-  echo "Installing tinycloud ${VERSION} for ${PLATFORM}..."
+  echo "Installing Tinycloud ${VERSION} for ${PLATFORM}..."
 else
   TARBALL="tinycloud-${PLATFORM}.tar.gz"
-  echo "Installing tinycloud (latest) for ${PLATFORM}..."
+  echo "Installing Tinycloud (latest) for ${PLATFORM}..."
 fi
 
 URL="${BASE_URL}/${TARBALL}"
@@ -59,7 +59,7 @@ tar -xzf "${TMP_DIR}/${TARBALL}" -C "$INSTALL_DIR"
 
 if [ -x "${INSTALL_DIR}/tinycloud" ]; then
   echo ""
-  echo "tinycloud installed successfully!"
+  echo "Tinycloud installed successfully!"
   echo "Binary: ${INSTALL_DIR}/tinycloud"
 
   # Ensure shell RC file has PATH configured
@@ -104,7 +104,7 @@ if [ -x "${INSTALL_DIR}/tinycloud" ]; then
         echo "To use tinycloud now, run:"
         echo "  source ${RC_FILE}"
         echo ""
-        echo "Or start a new terminal, then run 'tinycloud' to get started."
+        echo "Or start a new terminal, then run 'tinycloud' to get started"
       else
         echo "Add to your PATH:"
         echo "  ${EXPORT_LINE}"
