@@ -4,12 +4,6 @@ Minimal agentic CLI for working with video files and code. Powered by [Cloudglue
 
 ## Install
 
-### npm
-
-```bash
-npm install -g @cloudglue/tinycloud
-```
-
 ### curl
 
 ```bash
