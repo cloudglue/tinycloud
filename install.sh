@@ -3,9 +3,6 @@
 #
 # Usage:
 #   curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash
-#
-# Install a specific version:
-#   curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash -s -- v0.1.2
 
 set -euo pipefail
 
