@@ -2,12 +2,15 @@
 # Tinycloud skill preflight. Prints exactly ONE actionable line and exits:
 #   0  ok — tinycloud is installed, compatible, and configured
 #   10 tinycloud binary missing (or broken)
-#   11 installed version below the minimum supported version
+#   11 installed version outside the supported range (too old or too new)
 #   12 installed version lacks required feature ids
 #   13 installed and compatible but Cloudglue credentials are missing
 set -u
 
+# Mirror tinycloud-skill.json: min_version / supported_range upper bound
+# (CI diffs these against the manifest).
 MIN_VERSION="0.3.0"
+MAX_VERSION_EXCLUSIVE="0.4.0"
 INSTALL_CMD='curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash'
 # Kept in sync with ../tinycloud-skill.json required_features (CI diffs them).
 REQUIRED_FEATURES="envelope.v1 watch.v1 extract.v1 caption.v1 search.v1 probe.v1 ask.v1 clip.v1 grab.v1 jobs.v1 library.collections.v1 workflow.v1 publish.v1 publish.manage.v1 setup.v1"
@@ -35,6 +38,13 @@ fi
 LOWEST="$(printf '%s\n%s\n' "$VERSION" "$MIN_VERSION" | sort -t. -k1,1n -k2,2n -k3,3n | head -n1)"
 if [ "$LOWEST" != "$MIN_VERSION" ]; then
   echo "preflight: tinycloud ${VERSION} is below required ${MIN_VERSION} — upgrade: ${INSTALL_CMD}"
+  exit 11
+fi
+
+# Upper bound of the skill's supported_range: version must be < MAX_VERSION_EXCLUSIVE
+LOWEST_MAX="$(printf '%s\n%s\n' "$VERSION" "$MAX_VERSION_EXCLUSIVE" | sort -t. -k1,1n -k2,2n -k3,3n | head -n1)"
+if [ "$VERSION" = "$MAX_VERSION_EXCLUSIVE" ] || [ "$LOWEST_MAX" != "$VERSION" ]; then
+  echo "preflight: tinycloud ${VERSION} is newer than this skill supports (< ${MAX_VERSION_EXCLUSIVE}) — update the skill: npx @cloudglue/tinycloud skills install --force"
   exit 11
 fi
 

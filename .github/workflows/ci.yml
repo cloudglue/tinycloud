@@ -62,7 +62,12 @@ jobs:
           if min_version != skill["min_version"]:
               print(f"min_version mismatch: preflight={min_version} manifest={skill['min_version']}")
               sys.exit(1)
-          print(f"In sync: {len(manifest)} features, min_version {min_version}")
+          max_excl = re.search(r'MAX_VERSION_EXCLUSIVE="([^"]+)"', script).group(1)
+          range_max = re.search(r'<\s*([0-9][\w.+-]*)', skill["supported_range"]).group(1)
+          if max_excl != range_max:
+              print(f"supported_range upper bound mismatch: preflight={max_excl} manifest=<{range_max}")
+              sys.exit(1)
+          print(f"In sync: {len(manifest)} features, range >={min_version} <{max_excl}")
           EOF
       - name: Every skill has frontmatter description
         run: |

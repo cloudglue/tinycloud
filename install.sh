@@ -170,6 +170,8 @@ if [ "$HAVE_MANIFEST" -eq 1 ] && [ "$HAVE_PY3" -eq 1 ]; then
       echo "Error: Channel '${CHANNEL}' has no released version in the manifest" >&2
       exit 1
     fi
+    # Manifest-resolved versions get the same v-normalization as user input
+    VERSION="${VERSION#v}"
   fi
   URL="$(json_get "$MANIFEST_FILE" versions "$VERSION" platforms "$PLATFORM" url || true)"
   EXPECTED_SHA256="$(json_get "$MANIFEST_FILE" versions "$VERSION" platforms "$PLATFORM" sha256 || true)"
@@ -189,6 +191,8 @@ elif [ "$HAVE_MANIFEST" -eq 1 ]; then
       echo "Error: Channel '${CHANNEL}' has no released version in the manifest" >&2
       exit 1
     fi
+    # Manifest-resolved versions get the same v-normalization as user input
+    VERSION="${VERSION#v}"
   fi
   TARBALL="tinycloud-${PLATFORM}-v${VERSION}.tar.gz"
   URL="${BASE_URL}/${TARBALL}"
