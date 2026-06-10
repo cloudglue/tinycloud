@@ -171,6 +171,18 @@ test("install --prune protects the requested --version", { timeout: 30_000 }, (t
   assert.ok(!fs.existsSync(path.join(work, "versions", "0.1.0", ".ok")), "old unprotected version pruned");
 });
 
+test("install rejects --version with --latest", { timeout: 30_000 }, (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-install-conflict-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+
+  const res = runLauncher(["install", "--version", "0.2.0", "--latest"], {
+    TINYCLOUD_DIST_URL: "http://127.0.0.1:1",
+    TINYCLOUD_INSTALL_DIR: work,
+  });
+  assert.notEqual(res.code, 0);
+  assert.match(String(res.stderr), /--version and --latest cannot be used together/);
+});
+
 test("missing manifest degrades to sidecar verification", { timeout: 120_000 }, async (t) => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
   t.after(() => fs.rmSync(work, { recursive: true, force: true }));

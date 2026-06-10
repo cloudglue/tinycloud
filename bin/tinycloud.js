@@ -22,14 +22,18 @@ function pickVersion() {
 
 async function cmdInstall(args, target) {
   let version = pickVersion(); // honor TINYCLOUD_VERSION / wrapper-version, like the run path
+  let explicitVersion = false;
   let latest = false;
   let prune = false;
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--version" && args[i + 1]) version = normalizeVersion(args[++i]);
-    else if (args[i] === "--latest") latest = true;
+    if (args[i] === "--version" && args[i + 1]) {
+      explicitVersion = true;
+      version = normalizeVersion(args[++i]);
+    } else if (args[i] === "--latest") latest = true;
     else if (args[i] === "--prune") prune = true;
     else throw new Error(`Unknown install option: ${args[i]} (expected --version <v>, --latest, or --prune)`);
   }
+  if (latest && explicitVersion) throw new Error("install options --version and --latest cannot be used together");
   if (prune) {
     // Parsed after the full arg loop so `install --version X --prune`
     // protects X as well as the run path's pinned version.
