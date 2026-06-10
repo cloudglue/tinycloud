@@ -204,9 +204,10 @@ fi
 echo "Extracting to ${INSTALL_DIR}..."
 mkdir -p "$INSTALL_DIR"
 # Remove stale distribution assets so upgrades never leave ghost files behind
-rm -rf "${INSTALL_DIR}/tinycloud" "${INSTALL_DIR}/bin" "${INSTALL_DIR}/skills" \
-       "${INSTALL_DIR}/workflows" "${INSTALL_DIR}/licenses" \
-       "${INSTALL_DIR}/LICENSE.md" "${INSTALL_DIR}/THIRD_PARTY_NOTICES.md"
+# (${INSTALL_DIR:?} guards against expanding to /bin etc. if it were empty)
+rm -rf "${INSTALL_DIR:?}/tinycloud" "${INSTALL_DIR:?}/bin" "${INSTALL_DIR:?}/skills" \
+       "${INSTALL_DIR:?}/workflows" "${INSTALL_DIR:?}/licenses" \
+       "${INSTALL_DIR:?}/LICENSE.md" "${INSTALL_DIR:?}/THIRD_PARTY_NOTICES.md"
 tar -xzf "${TMP_DIR}/${TARBALL}" -C "$INSTALL_DIR"
 
 if [ -x "${INSTALL_DIR}/tinycloud" ]; then

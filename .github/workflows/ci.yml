@@ -71,15 +71,18 @@ jobs:
   smoke:
     name: Install + smoke (${{ matrix.os }}, ${{ matrix.version || 'latest' }})
     runs-on: ${{ matrix.os }}
+    # Live-CDN checks don't gate PRs (a CDN gap would fail every PR); they run
+    # on the daily schedule, pushes to main, and manual dispatch instead.
+    if: github.event_name != 'pull_request'
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
         version: ["", "0.3.0"]
-    # TODO(release-0.3.0): flip to `continue-on-error: ${{ matrix.version != '' }}`
-    # once the CDN hosts tinycloud >= 0.3.0. Today the live "latest" is 0.2.3,
-    # which predates the contract this repo targets, and pinned tarballs +
-    # manifest.json are not yet uploaded — so both legs are advisory.
+    # TODO(release-0.3.0): drop `continue-on-error` once the CDN hosts
+    # tinycloud >= 0.3.0. Today the live "latest" is 0.2.3, which predates the
+    # contract this repo targets, and pinned tarballs + manifest.json are not
+    # yet uploaded — so both legs are advisory.
     continue-on-error: true
     env:
       TINYCLOUD_INSTALL_DIR: ${{ github.workspace }}/tc/bin
@@ -97,7 +100,8 @@ jobs:
         run: |
           curl -fsSL https://app.cloudglue.dev/tinycloud.sh \
             | TINYCLOUD_INSTALL_DIR="$RUNNER_TEMP/live/bin" bash
-          "$RUNNER_TEMP/live/bin/tinycloud" --version --json | grep -q '"protocol_version"'
+          # </dev/null: pre-0.3.0 binaries open a TUI on this invocation
+          "$RUNNER_TEMP/live/bin/tinycloud" --version --json </dev/null | grep -q '"protocol_version"'
       - name: Contract smoke tests
         run: |
           TINYCLOUD_CMD="$TINYCLOUD_INSTALL_DIR/tinycloud" \
@@ -133,6 +137,8 @@ jobs:
   wrapper-e2e-live:
     name: npx wrapper against live CDN (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    # Live-CDN checks don't gate PRs — see the smoke job comment.
+    if: github.event_name != 'pull_request'
     # TODO(release-0.3.0): remove once the CDN hosts tinycloud >= 0.3.0
     # (the live latest, 0.2.3, does not speak `--version --json`).
     continue-on-error: true
@@ -152,7 +158,8 @@ jobs:
           TINYCLOUD_INSTALL_DIR: ${{ runner.temp }}/tc-root
           TINYCLOUD_VERSION: latest
         run: |
-          npx -y ./cloudglue-tinycloud-*.tgz --version --json | grep -q '"protocol_version"'
+          # </dev/null: pre-0.3.0 binaries open a TUI on this invocation
+          npx -y ./cloudglue-tinycloud-*.tgz --version --json </dev/null | grep -q '"protocol_version"'
       - name: Second run hits the cache (no network)
         env:
           TINYCLOUD_INSTALL_DIR: ${{ runner.temp }}/tc-root
@@ -161,5 +168,5 @@ jobs:
         run: |
           # resolve the cached version dir and pin to it (latest would re-resolve)
           v=$(ls "$TINYCLOUD_INSTALL_DIR/versions" | head -1)
-          TINYCLOUD_VERSION="$v" npx -y ./cloudglue-tinycloud-*.tgz --version --json \
+          TINYCLOUD_VERSION="$v" npx -y ./cloudglue-tinycloud-*.tgz --version --json </dev/null \
             | grep -q '"protocol_version"'
