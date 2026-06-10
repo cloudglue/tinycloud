@@ -92,7 +92,7 @@ async function generate() {
   const platforms = {};
   const sidecars = [];
   for (const plat of PLATFORMS) {
-    const name = `tinycloud-${plat}-${version}.tar.gz`;
+    const name = `tinycloud-${plat}-v${version}.tar.gz`; // CDN pinned names are v-prefixed
     const url = `${BASE}/${name}`;
     let info;
     if (fromCdn) {

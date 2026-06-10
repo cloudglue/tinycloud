@@ -83,10 +83,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
         version: ["", "0.3.0"]
-    # Latest legs are required (the CDN serves tinycloud >= 0.3.0). Pinned
-    # legs stay advisory until the versioned tarballs + manifest.json are
-    # uploaded (see the maintainer release runbook in the README).
-    continue-on-error: ${{ matrix.version != '' }}
     env:
       TINYCLOUD_INSTALL_DIR: ${{ github.workspace }}/tc/bin
     steps:

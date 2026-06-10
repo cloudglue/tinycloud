@@ -190,7 +190,7 @@ elif [ "$HAVE_MANIFEST" -eq 1 ]; then
       exit 1
     fi
   fi
-  TARBALL="tinycloud-${PLATFORM}-${VERSION}.tar.gz"
+  TARBALL="tinycloud-${PLATFORM}-v${VERSION}.tar.gz"
   URL="${BASE_URL}/${TARBALL}"
   EXPECTED_SHA256="$(curl -fsSL "${URL}.sha256" 2>/dev/null | grep -oE '^[0-9a-fA-F]{64}' | head -1 || true)"
 else
@@ -199,7 +199,7 @@ else
     exit 1
   fi
   if [ -n "$VERSION" ]; then
-    TARBALL="tinycloud-${PLATFORM}-${VERSION}.tar.gz"
+    TARBALL="tinycloud-${PLATFORM}-v${VERSION}.tar.gz"
   else
     TARBALL="tinycloud-${PLATFORM}.tar.gz"
   fi

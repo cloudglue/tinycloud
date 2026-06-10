@@ -69,7 +69,7 @@ function manifestBody() {
           protocol_version: "1",
           platforms: {
             [platform]: {
-              url: `${baseUrl()}/tinycloud-${platform}-${version}.tar.gz`,
+              url: `${baseUrl()}/tinycloud-${platform}-v${version}.tar.gz`,
               size: original.length,
               sha256,
             },
@@ -86,7 +86,7 @@ const server = http.createServer((req, res) => {
   const url = req.url.split("?")[0];
   const tarballRoutes = new Set([
     `/tinycloud-${platform}.tar.gz`,
-    `/tinycloud-${platform}-${version}.tar.gz`,
+    `/tinycloud-${platform}-v${version}.tar.gz`,
   ]);
   if (url === "/manifest.json") {
     if (noManifest) {

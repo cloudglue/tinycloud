@@ -32,7 +32,7 @@ test("resolveTarget rejects unknown platforms", () => {
 
 test("tarballName builds latest and pinned names", () => {
   assert.equal(tarballName("darwin-arm64", null), "tinycloud-darwin-arm64.tar.gz");
-  assert.equal(tarballName("linux-x64", "0.3.0"), "tinycloud-linux-x64-0.3.0.tar.gz");
+  assert.equal(tarballName("linux-x64", "0.3.0"), "tinycloud-linux-x64-v0.3.0.tar.gz");
 });
 
 test("normalizeVersion strips a leading v", () => {

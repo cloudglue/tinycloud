@@ -58,8 +58,9 @@ to your real shell rc file.
   resolution order: `TINYCLOUD_VERSION` env → `~/.tinycloud/wrapper-version`
   (written by `install --latest`/`update`) → package version.
 - CDN naming: `tinycloud-<platform>.tar.gz` (latest alias) and
-  `tinycloud-<platform>-<version>.tar.gz` (pinned, no `v` prefix). Platforms:
-  darwin-arm64, darwin-x64, linux-x64, linux-arm64.
+  `tinycloud-<platform>-v<version>.tar.gz` (pinned tarballs are
+  **v-prefixed** on the CDN; version strings are bare everywhere else).
+  Platforms: darwin-arm64, darwin-x64, linux-x64, linux-arm64.
 - `manifest.json` on the CDN (`{schema:1, channels:{stable,beta}, versions:{<v>:{platforms:{<p>:{url,size,sha256}}}}}`)
   is the resolution source of truth when present. "Latest" resolves through
   `channels.stable` to a pinned, checksummed URL; channel installs and
@@ -131,10 +132,10 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN's latest aliases serve 0.3.0; the latest smoke legs are
-  required. Pinned-version legs stay `continue-on-error` until the
-  versioned tarballs + `manifest.json` are uploaded (the publish-npm gate
-  also requires them).
+- The live CDN serves 0.3.0 (latest aliases + v-prefixed pinned tarballs);
+  all smoke legs are required. `manifest.json` + `.sha256` sidecars are the
+  remaining CDN uploads — installs warn-but-proceed without them, and the
+  publish-npm gate requires them.
 - `publish-npm.yml` (tag `v*`): asserts tag == package.json version → gates
   on `generate-manifest.mjs --check` against the live CDN → publishes with
   provenance (`NPM_TOKEN` secret).
