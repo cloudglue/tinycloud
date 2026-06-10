@@ -1,0 +1,5 @@
+node_modules/
+tinycloud-output/
+out/
+*.tgz
+.DS_Store
