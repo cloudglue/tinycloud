@@ -1,10 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const { resolveTarget, PlatformError } = require("../lib/platform.js");
 const { tarballName, baseUrl, DEFAULT_BASE } = require("../lib/manifest.js");
+const { normalizeVersion, pruneVersions } = require("../lib/installer.js");
 
 test("resolveTarget maps supported platforms", () => {
   assert.equal(resolveTarget("darwin", "arm64"), "darwin-arm64");
@@ -29,6 +33,29 @@ test("resolveTarget rejects unknown platforms", () => {
 test("tarballName builds latest and pinned names", () => {
   assert.equal(tarballName("darwin-arm64", null), "tinycloud-darwin-arm64.tar.gz");
   assert.equal(tarballName("linux-x64", "0.3.0"), "tinycloud-linux-x64-0.3.0.tar.gz");
+});
+
+test("normalizeVersion strips a leading v", () => {
+  assert.equal(normalizeVersion("v0.3.0"), "0.3.0");
+  assert.equal(normalizeVersion("0.3.0"), "0.3.0");
+  assert.equal(normalizeVersion("latest"), "latest");
+});
+
+test("pruneVersions never removes protected versions", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "tc-prune-"));
+  t.after(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+    delete process.env.TINYCLOUD_INSTALL_DIR;
+  });
+  process.env.TINYCLOUD_INSTALL_DIR = root;
+  for (const v of ["0.1.0", "0.2.0", "0.3.0", "0.4.0"]) {
+    fs.mkdirSync(path.join(root, "versions", v), { recursive: true });
+    fs.writeFileSync(path.join(root, "versions", v, ".ok"), "{}");
+  }
+  // keep 2, but protect the oldest (e.g. pinned via TINYCLOUD_VERSION)
+  const removed = pruneVersions(2, ["v0.1.0"]);
+  assert.deepEqual(removed, ["0.2.0"]);
+  assert.ok(fs.existsSync(path.join(root, "versions", "0.1.0", ".ok")), "protected version kept");
 });
 
 test("baseUrl honors TINYCLOUD_DIST_URL and strips trailing slash", () => {

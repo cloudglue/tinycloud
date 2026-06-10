@@ -47,18 +47,22 @@ jobs:
               json.load(open(p))
               print("OK", p)
           EOF
-      - name: Preflight feature list matches tinycloud-skill.json
+      - name: Preflight requirements match tinycloud-skill.json
         run: |
           python3 - <<'EOF'
           import json, re, sys
-          manifest = set(json.load(open("skills/tinycloud/tinycloud-skill.json"))["tinycloud"]["required_features"])
+          skill = json.load(open("skills/tinycloud/tinycloud-skill.json"))["tinycloud"]
           script = open("skills/tinycloud/scripts/preflight.sh").read()
-          m = re.search(r'REQUIRED_FEATURES="([^"]+)"', script)
-          preflight = set(m.group(1).split())
+          manifest = set(skill["required_features"])
+          preflight = set(re.search(r'REQUIRED_FEATURES="([^"]+)"', script).group(1).split())
           if manifest != preflight:
-              print("Mismatch:", manifest.symmetric_difference(preflight))
+              print("Feature mismatch:", manifest.symmetric_difference(preflight))
               sys.exit(1)
-          print("Feature lists in sync:", len(manifest), "features")
+          min_version = re.search(r'MIN_VERSION="([^"]+)"', script).group(1)
+          if min_version != skill["min_version"]:
+              print(f"min_version mismatch: preflight={min_version} manifest={skill['min_version']}")
+              sys.exit(1)
+          print(f"In sync: {len(manifest)} features, min_version {min_version}")
           EOF
       - name: Every skill has frontmatter description
         run: |

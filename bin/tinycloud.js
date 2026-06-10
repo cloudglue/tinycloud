@@ -8,6 +8,8 @@ const {
   pruneVersions,
   readOverrideVersion,
   writeOverrideVersion,
+  normalizeVersion,
+  isInstalled,
 } = require("../lib/installer");
 const { fetchManifest } = require("../lib/manifest");
 const { cmdSkills } = require("../lib/skills");
@@ -15,17 +17,17 @@ const { run } = require("../lib/run");
 const pkg = require("../package.json");
 
 function pickVersion() {
-  return process.env.TINYCLOUD_VERSION || readOverrideVersion() || pkg.version;
+  return normalizeVersion(process.env.TINYCLOUD_VERSION || readOverrideVersion() || pkg.version);
 }
 
 async function cmdInstall(args, target) {
   let version = pkg.version;
   let latest = false;
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--version" && args[i + 1]) version = args[++i];
+    if (args[i] === "--version" && args[i + 1]) version = normalizeVersion(args[++i]);
     else if (args[i] === "--latest") latest = true;
     else if (args[i] === "--prune") {
-      const removed = pruneVersions();
+      const removed = pruneVersions(2, [pickVersion()]);
       console.log(removed.length ? `Pruned: ${removed.join(", ")}` : "Nothing to prune.");
       return;
     } else throw new Error(`Unknown install option: ${args[i]} (expected --version <v>, --latest, or --prune)`);
@@ -44,16 +46,16 @@ async function cmdInstall(args, target) {
 async function cmdUpdate(target) {
   const manifest = await fetchManifest();
   if (!manifest) throw new Error("`update` requires the release manifest, which is not available");
-  const version = manifest.channels && manifest.channels.stable;
+  const version = normalizeVersion(manifest.channels && manifest.channels.stable);
   if (!version) throw new Error("The release manifest has no stable version");
-  const before = pickVersion();
+  const alreadyCurrent = isInstalled(version);
   const res = await ensureInstalled(version, target);
   writeOverrideVersion(res.version);
-  const removed = pruneVersions();
+  const removed = pruneVersions(2, [res.version]);
   console.log(
-    res.version === before
+    alreadyCurrent
       ? `tinycloud ${res.version} is already current (${res.dir})`
-      : `tinycloud updated ${before} → ${res.version} (${res.dir})`
+      : `tinycloud updated to ${res.version} (${res.dir})`
   );
   if (removed.length) console.log(`Pruned old versions: ${removed.join(", ")}`);
 }

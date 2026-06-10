@@ -141,6 +141,27 @@ test("missing manifest degrades to sidecar verification", { timeout: 120_000 }, 
   assert.match(String(strict.stderr), /TINYCLOUD_REQUIRE_MANIFEST/);
 });
 
+test("v-prefixed version and broken cache dir both recover", { timeout: 120_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+  const { child, url } = await startFixture(tarball);
+  t.after(() => child.kill());
+
+  const installRoot = path.join(work, "root");
+  // simulate an interrupted install: version dir exists but has no .ok
+  fs.mkdirSync(path.join(installRoot, "versions", VERSION), { recursive: true });
+
+  const res = runLauncher(["--version", "--json"], {
+    TINYCLOUD_DIST_URL: url,
+    TINYCLOUD_INSTALL_DIR: installRoot,
+    TINYCLOUD_VERSION: `v${VERSION}`, // v-prefix must normalize
+  });
+  assert.equal(res.code, 0, res.stderr);
+  assert.match(res.stdout, /"version":\s*"0\.3\.0"/);
+  assert.ok(fs.existsSync(path.join(installRoot, "versions", VERSION, ".ok")), "broken dir reclaimed");
+});
+
 test("update requires the manifest", { timeout: 60_000 }, async (t) => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
   t.after(() => fs.rmSync(work, { recursive: true, force: true }));
