@@ -1,0 +1,55 @@
+name: Publish npm wrapper
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (must match package.json)"
+        required: true
+
+permissions:
+  contents: read
+  id-token: write # npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+      - name: Resolve and verify version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "$PKG_VERSION" ]; then
+            echo "Tag/input version ($VERSION) != package.json version ($PKG_VERSION)" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Gate on CDN readiness (manifest + all pinned tarballs verify)
+        run: node scripts/generate-manifest.mjs --check --version "${{ steps.ver.outputs.version }}"
+      - name: Run tests
+        run: npm test
+      - name: Smoke-test the pinned install
+        env:
+          TINYCLOUD_INSTALL_DIR: ${{ runner.temp }}/tc/bin
+          TINYCLOUD_REQUIRE_MANIFEST: "1"
+        run: |
+          bash install.sh --version "${{ steps.ver.outputs.version }}"
+          TINYCLOUD_CMD="$TINYCLOUD_INSTALL_DIR/tinycloud" \
+          EXPECTED_VERSION="${{ steps.ver.outputs.version }}" \
+          bash scripts/smoke-test.sh
+      - name: Publish
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
