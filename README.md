@@ -99,47 +99,6 @@ Optionally add a line to your project's `CLAUDE.md` so agents reach for them:
 `Video work (analysis, captions, clips, workflows) goes through the tinycloud
 CLI — see the tinycloud skill; run tinycloud-init if the CLI isn't set up.`
 
-## Environment variables
-
-| Variable | Used by | Effect |
-|---|---|---|
-| `CLOUDGLUE_API_KEY` | binary | Cloudglue API key |
-| `TINYCLOUD_INSTALL_DIR` | curl installer | target bin dir (default `~/.tinycloud/bin`) |
-| `TINYCLOUD_INSTALL_DIR` | npm wrapper | cache root (default `~/.tinycloud`; versions under `versions/`) |
-| `TINYCLOUD_VERSION` | both | version to install/run |
-| `TINYCLOUD_DIST_URL` | both | distribution base URL override |
-| `TINYCLOUD_REQUIRE_MANIFEST` | both | `=1`: fail if the signed release manifest is missing |
-
-## Integrity
-
-Releases publish a `manifest.json` (versions, platforms, URLs, sizes,
-sha256) plus per-tarball `.sha256` sidecars. Both installers verify checksums
-when available and always **fail closed on a mismatch**. Set
-`TINYCLOUD_REQUIRE_MANIFEST=1` to also fail when the manifest is missing.
-
-## Maintainers: release runbook
-
-1. Upstream release uploads `tinycloud-<platform>-v<version>.tar.gz` (×4) and
-   refreshes the `tinycloud-<platform>.tar.gz` latest aliases on the CDN.
-2. Generate and upload the manifest + sidecars:
-   ```bash
-   node scripts/generate-manifest.mjs --version <version> --from-cdn
-   # then run the printed aws s3 cp / cloudfront invalidation commands
-   node scripts/generate-manifest.mjs --check --version <version>
-   ```
-3. In this repo: bump `package.json` to `<version>`, commit, tag `v<version>`,
-   push. The `publish-npm` workflow verifies the CDN and publishes
-   `@cloudglue/tinycloud` via npm
-   [trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC —
-   no token secret). One-time setup: on npmjs.com → package → Settings →
-   Trusted Publisher → GitHub Actions with org `cloudglue`, repo
-   `tinycloud`, workflow `publish-npm.yml` (fields are case-sensitive; the
-   very first publish of the package may need to be manual —
-   `npm publish --access public` — before the settings page exists).
-
-Wrapper-only emergency fixes publish as `<version>-wrapper.N` with the
-`latest` dist-tag moved manually.
-
 ## License
 
 © Aviary Inc. (d/b/a Cloudglue). All rights reserved. Use is subject to [Aviary Inc. Terms of Service](https://cloudglue.dev/terms).
