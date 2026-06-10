@@ -140,12 +140,15 @@ tinycloud workflow <name> <source> [--param k=v] [--segment <s>] [--out <dir>]
 ```bash
 tinycloud publish <html-file-or-dir> [--name <site-name>]
   [--visibility public|private] --json
+tinycloud publish list --json                  # sites for this account, with URLs
+tinycloud publish unpublish <site-name> --json # take a site down
 ```
 
 `public` = anyone with the link; `private` = Cloudglue account members only
 (same URL, edge-gated). Default keeps the site's current visibility.
 Republishing identical content makes no network calls; flipping visibility
-patches without re-uploading.
+patches without re-uploading. `list`/`unpublish` are gated by the
+`publish.manage.v1` feature id.
 
 ### setup — credentials
 

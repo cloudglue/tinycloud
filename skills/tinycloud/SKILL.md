@@ -95,8 +95,9 @@ tinycloud library collections list --json
 tinycloud watch ./long.mp4 --background --json   # returns pending + meta.job_id
 tinycloud jobs wait <job-id> --timeout 120s --json
 
-# Publish an HTML artifact to Cloudglue Sites
+# Publish an HTML artifact to Cloudglue Sites (manage with list / unpublish)
 tinycloud publish ./tinycloud-output/html/report.html --name report --visibility private --json
+tinycloud publish list --json
 ```
 
 Per-verb details and all flags: [reference/verbs.md](reference/verbs.md).

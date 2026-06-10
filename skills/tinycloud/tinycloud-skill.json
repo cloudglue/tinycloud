@@ -17,6 +17,7 @@
       "library.collections.v1",
       "workflow.v1",
       "publish.v1",
+      "publish.manage.v1",
       "setup.v1"
     ],
     "envelope_schema": "1",

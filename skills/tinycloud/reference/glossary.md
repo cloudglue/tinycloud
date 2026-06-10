@@ -68,4 +68,5 @@ connector?" or an envelope field needs explaining.
   renderer); gated by `--allow-command` / recipe `permissions: [command]`.
 - **Cloudglue Sites** — hosted pages for published artifacts:
   `tinycloud publish <html> --visibility public|private` returns a shareable
-  URL (private = Cloudglue account members only, same URL).
+  URL (private = Cloudglue account members only, same URL). Manage with
+  `publish list` and `publish unpublish <site-name>`.
