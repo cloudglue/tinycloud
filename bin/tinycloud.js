@@ -23,14 +23,17 @@ function pickVersion() {
 async function cmdInstall(args, target) {
   let version = pickVersion(); // honor TINYCLOUD_VERSION / wrapper-version, like the run path
   let latest = false;
+  let prune = false;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--version" && args[i + 1]) version = normalizeVersion(args[++i]);
     else if (args[i] === "--latest") latest = true;
-    else if (args[i] === "--prune") {
-      const removed = pruneVersions(2, [pickVersion()]);
-      console.log(removed.length ? `Pruned: ${removed.join(", ")}` : "Nothing to prune.");
-      return;
-    } else throw new Error(`Unknown install option: ${args[i]} (expected --version <v>, --latest, or --prune)`);
+    else if (args[i] === "--prune") prune = true;
+    else throw new Error(`Unknown install option: ${args[i]} (expected --version <v>, --latest, or --prune)`);
+  }
+  if (prune) {
+    const removed = pruneVersions(2, [pickVersion(), version]);
+    console.log(removed.length ? `Pruned: ${removed.join(", ")}` : "Nothing to prune.");
+    return;
   }
   if (latest) {
     const manifest = await fetchManifest();

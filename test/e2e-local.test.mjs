@@ -11,12 +11,16 @@ import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
+const require = createRequire(import.meta.url);
+const { resolveTarget } = require("../lib/platform.js");
 const here = path.dirname(fileURLToPath(import.meta.url));
 const launcher = path.join(here, "..", "bin", "tinycloud.js");
 const fixtureCdn = path.join(here, "fixtures", "make-fixture-cdn.mjs");
 const VERSION = "0.3.0";
+const TARGET = resolveTarget();
 
 function makeStubTarball(dir) {
   const stage = path.join(dir, "stage");
@@ -95,6 +99,40 @@ test("launcher downloads, verifies, caches, and execs", { timeout: 120_000 }, as
   assert.match(second.stdout, /"version":\s*"0\.3\.0"/);
 });
 
+test("launcher rejects a cached version installed for another platform", { timeout: 120_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+  const { child, url } = await startFixture(tarball);
+  t.after(() => child.kill());
+
+  const installRoot = path.join(work, "root");
+  const cached = path.join(installRoot, "versions", VERSION);
+  const wrongTarget = TARGET === "linux-x64" ? "darwin-arm64" : "linux-x64";
+  fs.mkdirSync(cached, { recursive: true });
+  fs.writeFileSync(path.join(cached, "tinycloud"), "#!/bin/sh\necho '{\"version\":\"wrong-platform\"}'\n", {
+    mode: 0o755,
+  });
+  fs.writeFileSync(
+    path.join(cached, ".ok"),
+    JSON.stringify({
+      version: VERSION,
+      target: wrongTarget,
+      url: `https://example.test/tinycloud-${wrongTarget}-v${VERSION}.tar.gz`,
+    }) +
+      "\n"
+  );
+
+  const res = runLauncher(["--version", "--json"], {
+    TINYCLOUD_DIST_URL: url,
+    TINYCLOUD_INSTALL_DIR: installRoot,
+    TINYCLOUD_VERSION: VERSION,
+  });
+  assert.equal(res.code, 0, res.stderr);
+  assert.match(res.stdout, /"version":\s*"0\.3\.0"/);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(cached, ".ok"), "utf8")).target, TARGET);
+});
+
 test("checksum mismatch fails closed", { timeout: 120_000 }, async (t) => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
   t.after(() => fs.rmSync(work, { recursive: true, force: true }));
@@ -111,6 +149,25 @@ test("checksum mismatch fails closed", { timeout: 120_000 }, async (t) => {
   assert.notEqual(res.code, 0);
   assert.match(String(res.stderr), /Checksum mismatch/);
   assert.ok(!fs.existsSync(path.join(installRoot, "versions", VERSION, ".ok")), "no .ok after mismatch");
+});
+
+test("install --prune protects the requested --version", { timeout: 30_000 }, (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-prune-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+
+  for (const v of ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.5.0"]) {
+    fs.mkdirSync(path.join(work, "versions", v), { recursive: true });
+    fs.writeFileSync(path.join(work, "versions", v, ".ok"), "{}");
+  }
+
+  const res = runLauncher(["install", "--version", "0.2.0", "--prune"], {
+    TINYCLOUD_INSTALL_DIR: work,
+    TINYCLOUD_VERSION: "0.3.0",
+  });
+  assert.equal(res.code, 0, res.stderr);
+  assert.ok(fs.existsSync(path.join(work, "versions", "0.2.0", ".ok")), "requested version kept");
+  assert.ok(fs.existsSync(path.join(work, "versions", "0.3.0", ".ok")), "active version kept");
+  assert.ok(!fs.existsSync(path.join(work, "versions", "0.1.0", ".ok")), "old unprotected version pruned");
 });
 
 test("missing manifest degrades to sidecar verification", { timeout: 120_000 }, async (t) => {
