@@ -10,6 +10,10 @@ const { resolveTarget, PlatformError } = require("../lib/platform.js");
 const { tarballName, baseUrl, DEFAULT_BASE } = require("../lib/manifest.js");
 const { normalizeVersion, pruneVersions, isInstalled } = require("../lib/installer.js");
 
+function writeExecutable(file, contents = "#!/bin/sh\nexit 0\n") {
+  fs.writeFileSync(file, contents, { mode: 0o755 });
+}
+
 test("resolveTarget maps supported platforms", () => {
   assert.equal(resolveTarget("darwin", "arm64"), "darwin-arm64");
   assert.equal(resolveTarget("darwin", "x64"), "darwin-x64");
@@ -74,6 +78,7 @@ test("isInstalled is platform-aware (synced cache roots)", (t) => {
   process.env.TINYCLOUD_INSTALL_DIR = root;
   const dir = path.join(root, "versions", "0.3.0");
   fs.mkdirSync(dir, { recursive: true });
+  writeExecutable(path.join(dir, "tinycloud"));
 
   fs.writeFileSync(path.join(dir, ".ok"), JSON.stringify({ version: "0.3.0", target: "linux-x64" }));
   assert.equal(isInstalled("0.3.0"), true, "no target → presence check");
@@ -87,6 +92,24 @@ test("isInstalled is platform-aware (synced cache roots)", (t) => {
   );
   assert.equal(isInstalled("0.3.0", "darwin-arm64"), true);
   assert.equal(isInstalled("0.3.0", "linux-x64"), false);
+});
+
+test("isInstalled requires an executable tinycloud binary", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "tc-complete-"));
+  t.after(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+    delete process.env.TINYCLOUD_INSTALL_DIR;
+  });
+  process.env.TINYCLOUD_INSTALL_DIR = root;
+  const dir = path.join(root, "versions", "0.3.0");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, ".ok"), JSON.stringify({ version: "0.3.0", target: "linux-x64" }));
+
+  assert.equal(isInstalled("0.3.0", "linux-x64"), false, ".ok without binary is incomplete");
+  fs.writeFileSync(path.join(dir, "tinycloud"), "#!/bin/sh\nexit 0\n", { mode: 0o644 });
+  assert.equal(isInstalled("0.3.0", "linux-x64"), false, "non-executable binary is incomplete");
+  fs.chmodSync(path.join(dir, "tinycloud"), 0o755);
+  assert.equal(isInstalled("0.3.0", "linux-x64"), true);
 });
 
 test("baseUrl honors TINYCLOUD_DIST_URL and strips trailing slash", () => {

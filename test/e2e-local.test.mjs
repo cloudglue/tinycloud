@@ -18,6 +18,7 @@ const require = createRequire(import.meta.url);
 const { resolveTarget } = require("../lib/platform.js");
 const here = path.dirname(fileURLToPath(import.meta.url));
 const launcher = path.join(here, "..", "bin", "tinycloud.js");
+const installScript = path.join(here, "..", "install.sh");
 const fixtureCdn = path.join(here, "fixtures", "make-fixture-cdn.mjs");
 const VERSION = "0.3.0";
 const TARGET = resolveTarget();
@@ -198,6 +199,27 @@ test("missing manifest degrades to sidecar verification", { timeout: 120_000 }, 
   assert.match(String(strict.stderr), /TINYCLOUD_REQUIRE_MANIFEST/);
 });
 
+test("install.sh preserves user-owned common directories", { timeout: 120_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-install-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+  const { child, url } = await startFixture(tarball);
+  t.after(() => child.kill());
+
+  const installDir = path.join(work, "bin");
+  const userBin = path.join(installDir, "bin");
+  fs.mkdirSync(userBin, { recursive: true });
+  fs.writeFileSync(path.join(installDir, "tinycloud"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  fs.writeFileSync(path.join(userBin, "user-tool"), "keep\n");
+
+  execFileSync("bash", [installScript, "--install-dir", installDir, "--version", VERSION], {
+    encoding: "utf8",
+    env: { ...process.env, HOME: path.join(work, "home"), SHELL: "/bin/sh", TINYCLOUD_DIST_URL: url },
+  });
+
+  assert.equal(fs.readFileSync(path.join(userBin, "user-tool"), "utf8"), "keep\n");
+});
+
 test("v-prefixed version and broken cache dir both recover", { timeout: 120_000 }, async (t) => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
   t.after(() => fs.rmSync(work, { recursive: true, force: true }));
@@ -206,8 +228,10 @@ test("v-prefixed version and broken cache dir both recover", { timeout: 120_000 
   t.after(() => child.kill());
 
   const installRoot = path.join(work, "root");
-  // simulate an interrupted install: version dir exists but has no .ok
-  fs.mkdirSync(path.join(installRoot, "versions", VERSION), { recursive: true });
+  // simulate a broken completed install: .ok exists but the binary is gone
+  const cached = path.join(installRoot, "versions", VERSION);
+  fs.mkdirSync(cached, { recursive: true });
+  fs.writeFileSync(path.join(cached, ".ok"), JSON.stringify({ version: VERSION, target: TARGET }) + "\n");
 
   const res = runLauncher(["--version", "--json"], {
     TINYCLOUD_DIST_URL: url,
@@ -216,6 +240,7 @@ test("v-prefixed version and broken cache dir both recover", { timeout: 120_000 
   });
   assert.equal(res.code, 0, res.stderr);
   assert.match(res.stdout, /"version":\s*"0\.3\.0"/);
+  assert.ok(fs.existsSync(path.join(installRoot, "versions", VERSION, "tinycloud")), "binary restored");
   assert.ok(fs.existsSync(path.join(installRoot, "versions", VERSION, ".ok")), "broken dir reclaimed");
 });
 

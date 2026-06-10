@@ -269,25 +269,30 @@ fi
 echo "Extracting to ${INSTALL_DIR}..."
 mkdir -p "$INSTALL_DIR"
 
-# Remove stale distribution assets so upgrades never leave ghost files behind
-# — but ONLY when the directory is clearly a dedicated tinycloud install dir
-# (every entry belongs to the distribution). Wiping entry names like bin/
-# inside a shared prefix such as --install-dir /usr/local would destroy
-# unrelated files, so a mixed directory skips the cleanup instead.
+# Remove stale root distribution files so upgrades never leave ghost files
+# behind — but ONLY when the directory is clearly a dedicated tinycloud
+# install dir. Directory names like bin/, skills/, or workflows/ are too
+# generic to prove ownership, so their presence makes the directory mixed and
+# skips cleanup rather than risking user data.
 # (${INSTALL_DIR:?} guards against expanding to /bin etc. if it were empty)
 DEDICATED=1
 for entry in "${INSTALL_DIR:?}"/* "${INSTALL_DIR:?}"/.*; do
   name="$(basename "$entry")"
   [ -e "$entry" ] || continue
   case "$name" in
-    .|..|tinycloud|bin|skills|workflows|licenses|LICENSE.md|THIRD_PARTY_NOTICES.md) ;;
+    .|..) ;;
+    tinycloud|LICENSE.md|THIRD_PARTY_NOTICES.md)
+      if [ -d "$entry" ]; then
+        DEDICATED=0
+        break
+      fi
+      ;;
     *) DEDICATED=0; break ;;
   esac
 done
 if [ "$DEDICATED" -eq 1 ]; then
-  rm -rf "${INSTALL_DIR:?}/tinycloud" "${INSTALL_DIR:?}/bin" "${INSTALL_DIR:?}/skills" \
-         "${INSTALL_DIR:?}/workflows" "${INSTALL_DIR:?}/licenses" \
-         "${INSTALL_DIR:?}/LICENSE.md" "${INSTALL_DIR:?}/THIRD_PARTY_NOTICES.md"
+  rm -f "${INSTALL_DIR:?}/tinycloud" "${INSTALL_DIR:?}/LICENSE.md" \
+        "${INSTALL_DIR:?}/THIRD_PARTY_NOTICES.md"
 else
   echo "Warning: ${INSTALL_DIR} contains files that are not part of a tinycloud" >&2
   echo "install; skipping stale-asset cleanup (files from older tinycloud" >&2
