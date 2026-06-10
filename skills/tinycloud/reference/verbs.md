@@ -159,9 +159,10 @@ Output: `--json` (force JSONL envelopes), `--pretty` (one JSON array),
 `--data raw`, `--raw-output` (raw backend payload; disables pipe protocol),
 `--quiet`, `--verbose`.
 
-Cache/spend: `--refresh` (recompute), `--no-cache` (no persistence),
-`--cached` (reuse exact-match ask/probe history), `--no-upload` (refuse cloud
-upload → `needs_upload`), `--no-download` (refuse local materialization →
-`needs_download`).
+Cache/spend — on `watch`, `extract`, `caption`, and `workflow` only:
+`--refresh` (recompute), `--no-cache` (no persistence), `--cached` (reuse
+exact-match history), `--no-upload` (refuse cloud upload → `needs_upload`),
+`--no-download` (refuse local materialization → `needs_download`).
+`ask`/`probe` always call the cloud; use `search` for a free cached lookup.
 
-Source reuse: `--source-id <id>`, `--result-id <id>`.
+Source reuse (`watch`/`extract`/`caption`): `--source-id <id>`, `--result-id <id>`.

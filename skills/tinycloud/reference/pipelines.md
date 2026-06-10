@@ -57,17 +57,20 @@ Cloud verbs cost Cloudglue credits. Patterns to control spend:
 # Refuse uploads: returns needs_upload instead of spending
 tinycloud watch ./new.mp4 --no-upload --json
 
-# Reuse cache only — fails fast if nothing is cached
-tinycloud ask "…" --in ./demo.mp4 --cached --json
+# Reuse a prior watch's enrichment without re-uploading
+tinycloud extract "key moments" ./demo.mp4 --cached --json
 
-# See whether you'd hit cache before running for real
-# meta.cache reports per-layer: hit | miss | written | skipped
+# Free local lookup over already-cached context (no cloud call at all)
+tinycloud search "pricing" --in ./demo.mp4 --json
 ```
 
 - `--no-upload` → refuse Cloudglue upload/materialization (`needs_upload`).
 - `--no-download` → refuse local materialization (`needs_download`).
 - `--refresh` → force recompute (spends even on cache hits).
 - `--no-cache` → don't persist results (still spends).
+- These four flags exist on `watch`, `extract`, `caption`, and `workflow`
+  only — `ask`/`probe` always go to the cloud (use `search` for a free
+  cached lookup).
 - `meta.cache` in every envelope tells you what was reused vs written.
 
 ## Worked examples
