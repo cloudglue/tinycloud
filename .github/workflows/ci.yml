@@ -83,11 +83,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
         version: ["", "0.3.0"]
-    # TODO(release-0.3.0): drop `continue-on-error` once the CDN hosts
-    # tinycloud >= 0.3.0. Today the live "latest" is 0.2.3, which predates the
-    # contract this repo targets, and pinned tarballs + manifest.json are not
-    # yet uploaded — so both legs are advisory.
-    continue-on-error: true
+    # Latest legs are required (the CDN serves tinycloud >= 0.3.0). Pinned
+    # legs stay advisory until the versioned tarballs + manifest.json are
+    # uploaded (see the maintainer release runbook in the README).
+    continue-on-error: ${{ matrix.version != '' }}
     env:
       TINYCLOUD_INSTALL_DIR: ${{ github.workspace }}/tc/bin
     steps:
@@ -143,9 +142,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     # Live-CDN checks don't gate PRs — see the smoke job comment.
     if: github.event_name != 'pull_request'
-    # TODO(release-0.3.0): remove once the CDN hosts tinycloud >= 0.3.0
-    # (the live latest, 0.2.3, does not speak `--version --json`).
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
