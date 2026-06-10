@@ -17,9 +17,22 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Load release params from <repo>/.env when present (KEY=VALUE lines; real
+// environment variables win). See .env.example.
+const envFile = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", ".env");
+if (fs.existsSync(envFile)) {
+  for (const line of fs.readFileSync(envFile, "utf8").split("\n")) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
+    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+  }
+}
 
 const PLATFORMS = ["darwin-arm64", "darwin-x64", "linux-x64", "linux-arm64"];
 const BASE = (process.env.TINYCLOUD_DIST_URL || "https://media.cloudglue.dev/tinycloud-dist").replace(/\/+$/, "");
+const BUCKET = process.env.TINYCLOUD_S3_BUCKET || "<bucket>";
+const CF_DISTRIBUTION_ID = process.env.TINYCLOUD_CF_DISTRIBUTION_ID || "";
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(name);
@@ -131,10 +144,19 @@ async function generate() {
   console.log(`Wrote ${manifestPath} and ${sidecars.length} sidecars.\n`);
   console.log("Upload with:");
   for (const s of sidecars) {
-    console.log(`  aws s3 cp ${path.join(outDir, s.name)} s3://<bucket>/tinycloud-dist/${s.name}`);
+    console.log(`  aws s3 cp ${path.join(outDir, s.name)} s3://${BUCKET}/tinycloud-dist/${s.name}`);
   }
-  console.log(`  aws s3 cp ${manifestPath} s3://<bucket>/tinycloud-dist/manifest.json`);
-  console.log(`  aws cloudfront create-invalidation --distribution-id <id> --paths "/tinycloud-dist/manifest.json"`);
+  console.log(`  aws s3 cp ${manifestPath} s3://${BUCKET}/tinycloud-dist/manifest.json`);
+  console.log("");
+  console.log("Then invalidate the CloudFront cache (CloudFront may have cached the");
+  console.log("pre-upload 403s, and future manifest updates always need this):");
+  if (CF_DISTRIBUTION_ID) {
+    console.log(`  aws cloudfront create-invalidation --distribution-id ${CF_DISTRIBUTION_ID} --paths "/tinycloud-dist/manifest.json" "/tinycloud-dist/*.sha256"`);
+  } else {
+    console.log("  # set TINYCLOUD_CF_DISTRIBUTION_ID in .env to get a ready-to-run command; lookup:");
+    console.log(`  DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@=='${BUCKET}']].Id | [0]" --output text)`);
+    console.log(`  aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/tinycloud-dist/manifest.json" "/tinycloud-dist/*.sha256"`);
+  }
 }
 
 if (has("--check")) await check();

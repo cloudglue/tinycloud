@@ -4,3 +4,4 @@ out/
 *.tgz
 .DS_Store
 docs/e2e-results-*.md
+.env
