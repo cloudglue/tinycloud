@@ -1,0 +1,25 @@
+{
+  "skill_version": "0.1.0",
+  "tinycloud": {
+    "min_version": "0.3.0",
+    "supported_range": ">=0.3.0 <0.4.0",
+    "required_features": [
+      "envelope.v1",
+      "watch.v1",
+      "extract.v1",
+      "caption.v1",
+      "search.v1",
+      "probe.v1",
+      "ask.v1",
+      "clip.v1",
+      "grab.v1",
+      "jobs.v1",
+      "library.collections.v1",
+      "workflow.v1",
+      "publish.v1",
+      "setup.v1"
+    ],
+    "envelope_schema": "1",
+    "workflow_schema": "1"
+  }
+}
