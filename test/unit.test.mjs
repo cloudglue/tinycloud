@@ -52,6 +52,13 @@ test("normalizeVersion rejects path-traversal and separator inputs", () => {
   }
 });
 
+function fakeInstall(root, v, { binary = true } = {}) {
+  const dir = path.join(root, "versions", v);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, ".ok"), "{}");
+  if (binary) fs.writeFileSync(path.join(dir, "tinycloud"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+}
+
 test("pruneVersions never removes protected versions", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "tc-prune-"));
   t.after(() => {
@@ -59,14 +66,29 @@ test("pruneVersions never removes protected versions", (t) => {
     delete process.env.TINYCLOUD_INSTALL_DIR;
   });
   process.env.TINYCLOUD_INSTALL_DIR = root;
-  for (const v of ["0.1.0", "0.2.0", "0.3.0", "0.4.0"]) {
-    fs.mkdirSync(path.join(root, "versions", v), { recursive: true });
-    fs.writeFileSync(path.join(root, "versions", v, ".ok"), "{}");
-  }
+  for (const v of ["0.1.0", "0.2.0", "0.3.0", "0.4.0"]) fakeInstall(root, v);
   // keep 2, but protect the oldest (e.g. pinned via TINYCLOUD_VERSION)
   const removed = pruneVersions(2, ["v0.1.0"]);
   assert.deepEqual(removed, ["0.2.0"]);
   assert.ok(fs.existsSync(path.join(root, "versions", "0.1.0", ".ok")), "protected version kept");
+});
+
+test("pruneVersions removes broken entries without spending retention slots", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "tc-prune-"));
+  t.after(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+    delete process.env.TINYCLOUD_INSTALL_DIR;
+  });
+  process.env.TINYCLOUD_INSTALL_DIR = root;
+  fakeInstall(root, "0.1.0"); // healthy, oldest
+  fakeInstall(root, "0.2.0"); // healthy
+  fakeInstall(root, "0.3.0", { binary: false }); // broken: .ok but no binary
+  fakeInstall(root, "0.4.0", { binary: false }); // broken
+
+  const removed = pruneVersions(2, []);
+  assert.deepEqual(removed.sort(), ["0.3.0", "0.4.0"], "broken entries removed, healthy kept");
+  assert.ok(fs.existsSync(path.join(root, "versions", "0.1.0", ".ok")), "working old version not crowded out");
+  assert.ok(fs.existsSync(path.join(root, "versions", "0.2.0", ".ok")));
 });
 
 test("isInstalled is platform-aware (synced cache roots)", (t) => {
