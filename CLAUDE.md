@@ -70,8 +70,9 @@ to your real shell rc file.
   S3 keys** — treat 403 and 404 both as "missing".
 - `install.sh` (bash) and `lib/manifest.js` (node) implement the same
   resolution logic; changes to one must mirror the other.
-- The launcher chain: `bin/tinycloud.js` (dispatch; owns the `install`/`update`
-  subcommands — the binary must never add verbs with those names) →
+- The launcher chain: `bin/tinycloud.js` (dispatch; owns the
+  `install`/`update`/`skills` subcommands — the binary must never add verbs
+  with those names; a regression test in the source repo guards this) →
   `lib/platform.js` → `lib/manifest.js` → `lib/download.js` (sha256 computed
   in the same pass as the stream; curl fallback when `HTTPS_PROXY` is set) →
   `lib/installer.js` (extract-then-atomic-rename, `.ok` marker written only
@@ -98,9 +99,14 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
 
 ### Skills
 
+- The npm package bundles `skills/` (see `files` in package.json);
+  `npx @cloudglue/tinycloud skills install` (`lib/skills.js`) copies them
+  into detected harness dirs (`.claude/skills/`, `.agents/skills/`;
+  `--global`/`--dir`/`--skill` override) without touching the binary cache.
 - `skills/tinycloud/` is the flagship: SKILL.md + `reference/*.md`
   (progressive disclosure) + `scripts/preflight.sh` + `tinycloud-skill.json`
   (compat manifest: `min_version`, `supported_range`, `required_features`).
+  `skills/tinycloud-init/` is the guided first-time setup.
 - `preflight.sh` prints exactly ONE actionable line; exit codes: 0 ok /
   10 binary missing / 11 version too low / 12 missing features /
   13 missing credentials. Its `REQUIRED_FEATURES` list must stay identical to

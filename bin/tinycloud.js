@@ -10,6 +10,7 @@ const {
   writeOverrideVersion,
 } = require("../lib/installer");
 const { fetchManifest } = require("../lib/manifest");
+const { cmdSkills } = require("../lib/skills");
 const { run } = require("../lib/run");
 const pkg = require("../package.json");
 
@@ -61,10 +62,12 @@ async function main() {
   const args = process.argv.slice(2);
   const target = resolveTarget();
 
-  // Wrapper-owned subcommands. The binary has no install/update verbs;
-  // these names are reserved with the binary owners.
+  // Wrapper-owned subcommands. The binary has no install/update/skills
+  // verbs; these names are reserved with the binary owners (guarded by a
+  // regression test in the source repo).
   if (args[0] === "install") return cmdInstall(args.slice(1), target);
   if (args[0] === "update") return cmdUpdate(target);
+  if (args[0] === "skills") return cmdSkills(args.slice(1));
 
   const { dir } = await ensureInstalled(pickVersion(), target);
   run(path.join(dir, "tinycloud"), args, dir);

@@ -50,6 +50,14 @@ This repo also distributes agent skills that teach coding agents (Claude
 Code, Codex, and anything else following the
 [Agent Skills](https://agentskills.io) standard) to drive the tinycloud CLI.
 
+**One command** (detects your agent and installs the bundled skills):
+
+```bash
+npx @cloudglue/tinycloud skills install          # project-level (.claude/skills, .agents/skills)
+npx @cloudglue/tinycloud skills install --global # ~/.claude/skills (all your projects)
+npx @cloudglue/tinycloud skills install --skill tinycloud,blog-post   # just some
+```
+
 **Claude Code** (as a plugin):
 
 ```text
@@ -57,15 +65,13 @@ Code, Codex, and anything else following the
 /plugin install tinycloud@tinycloud
 ```
 
-**Any agent** (raw skill folders — copy into your agent's skills directory):
-
-```bash
-cp -r skills/* ~/.claude/skills/        # Claude Code personal skills
-```
+Also works with the generic installer (`npx skills add cloudglue/tinycloud`)
+or a plain copy (`cp -r skills/* ~/.claude/skills/`).
 
 | Skill | What it does |
 |---|---|
-| `tinycloud` | The general skill: full CLI usage, JSON envelope contract, verbs, workflows, troubleshooting |
+| `tinycloud-init` | First-time setup: install the CLI, configure the API key, verify with a free command |
+| `tinycloud` | The general skill: full CLI usage, JSON envelope contract, verbs, workflows, glossary, troubleshooting |
 | `sales-coaching` | Sales call → coaching dashboard (scores, speech metrics, objections) |
 | `blog-post` | Video → rich blog post with sections, thumbnails, takeaways |
 | `ad-analysis` | Video ad → shot timeline, hook, pacing, CTA breakdown |
@@ -73,9 +79,25 @@ cp -r skills/* ~/.claude/skills/        # Claude Code personal skills
 | `youtube-publish` | Video → YouTube title, description, chapters, tags, subtitles |
 | `tinycloud-skill-creator` | Author your own tinycloud-powered skills (recipe + render script) |
 
-Each skill checks compatibility first via `skills/tinycloud/scripts/preflight.sh`,
-which gates on the installed binary's version and feature ids
-(`skills/tinycloud/tinycloud-skill.json` declares the requirements).
+New to tinycloud? Invoke `tinycloud-init` in your agent for guided setup.
+Each skill checks compatibility via the general skill's
+`scripts/preflight.sh`, which gates on the installed binary's version and
+feature ids (`skills/tinycloud/tinycloud-skill.json` declares the
+requirements).
+
+### Team setup
+
+To give every agent session in a repo the same skills, commit them:
+
+```bash
+cd your-project
+npx @cloudglue/tinycloud skills install     # writes .claude/skills/ (and .agents/skills/ if present)
+git add .claude .agents 2>/dev/null; git commit -m "Add tinycloud agent skills"
+```
+
+Optionally add a line to your project's `CLAUDE.md` so agents reach for them:
+`Video work (analysis, captions, clips, workflows) goes through the tinycloud
+CLI — see the tinycloud skill; run tinycloud-init if the CLI isn't set up.`
 
 ## Environment variables
 
