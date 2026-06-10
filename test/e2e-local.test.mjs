@@ -162,6 +162,38 @@ test("v-prefixed version and broken cache dir both recover", { timeout: 120_000 
   assert.ok(fs.existsSync(path.join(installRoot, "versions", VERSION, ".ok")), "broken dir reclaimed");
 });
 
+test("TINYCLOUD_VERSION traversal input fails closed", { timeout: 30_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const res = runLauncher(["--version"], {
+    TINYCLOUD_DIST_URL: "http://127.0.0.1:1",
+    TINYCLOUD_INSTALL_DIR: path.join(work, "root"),
+    TINYCLOUD_VERSION: "../../escape",
+  });
+  assert.notEqual(res.code, 0);
+  assert.match(String(res.stderr), /Invalid version/);
+});
+
+test("latest without manifest reuses warm cache via ETag", { timeout: 120_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+  const { child, url } = await startFixture(tarball, ["--no-manifest"]);
+  t.after(() => child.kill());
+
+  const installRoot = path.join(work, "root");
+  const env = { TINYCLOUD_DIST_URL: url, TINYCLOUD_INSTALL_DIR: installRoot, TINYCLOUD_VERSION: "latest" };
+
+  const first = runLauncher(["--version", "--json"], env);
+  assert.equal(first.code, 0, first.stderr);
+  const okPath = path.join(installRoot, "versions", VERSION, ".ok");
+  const before = fs.statSync(okPath).mtimeMs;
+
+  const second = runLauncher(["--version", "--json"], env);
+  assert.equal(second.code, 0, second.stderr);
+  assert.equal(fs.statSync(okPath).mtimeMs, before, "no re-download/re-extract on warm cache");
+});
+
 test("update requires the manifest", { timeout: 60_000 }, async (t) => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
   t.after(() => fs.rmSync(work, { recursive: true, force: true }));

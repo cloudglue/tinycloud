@@ -21,7 +21,7 @@ function pickVersion() {
 }
 
 async function cmdInstall(args, target) {
-  let version = pkg.version;
+  let version = pickVersion(); // honor TINYCLOUD_VERSION / wrapper-version, like the run path
   let latest = false;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--version" && args[i + 1]) version = normalizeVersion(args[++i]);
@@ -51,7 +51,9 @@ async function cmdUpdate(target) {
   const alreadyCurrent = isInstalled(version);
   const res = await ensureInstalled(version, target);
   writeOverrideVersion(res.version);
-  const removed = pruneVersions(2, [res.version]);
+  // Protect both the new stable and whatever the run path still resolves to
+  // (e.g. a TINYCLOUD_VERSION env pin).
+  const removed = pruneVersions(2, [res.version, pickVersion()]);
   console.log(
     alreadyCurrent
       ? `tinycloud ${res.version} is already current (${res.dir})`
@@ -62,14 +64,16 @@ async function cmdUpdate(target) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const target = resolveTarget();
 
   // Wrapper-owned subcommands. The binary has no install/update/skills
   // verbs; these names are reserved with the binary owners (guarded by a
-  // regression test in the source repo).
+  // regression test in the source repo). `skills` only copies bundled
+  // files, so it dispatches before the platform gate (works on Windows).
+  if (args[0] === "skills") return cmdSkills(args.slice(1));
+
+  const target = resolveTarget();
   if (args[0] === "install") return cmdInstall(args.slice(1), target);
   if (args[0] === "update") return cmdUpdate(target);
-  if (args[0] === "skills") return cmdSkills(args.slice(1));
 
   const { dir } = await ensureInstalled(pickVersion(), target);
   run(path.join(dir, "tinycloud"), args, dir);

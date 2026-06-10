@@ -88,18 +88,24 @@ const server = http.createServer((req, res) => {
     `/tinycloud-${platform}.tar.gz`,
     `/tinycloud-${platform}-v${version}.tar.gz`,
   ]);
+  const head = req.method === "HEAD";
   if (url === "/manifest.json") {
     if (noManifest) {
       res.writeHead(403).end("Forbidden"); // mimic CloudFront missing-key behavior
     } else {
-      res.writeHead(200, { "content-type": "application/json" }).end(manifestBody());
+      res.writeHead(200, { "content-type": "application/json" }).end(head ? undefined : manifestBody());
     }
   } else if (tarballRoutes.has(url)) {
-    res
-      .writeHead(200, { "content-type": "application/x-gzip", "content-length": served.length })
-      .end(served);
+    res.writeHead(200, {
+      "content-type": "application/x-gzip",
+      "content-length": served.length,
+      etag: `"${sha256.slice(0, 32)}"`, // stable per-content, like S3
+    });
+    res.end(head ? undefined : served);
   } else if (url.endsWith(".tar.gz.sha256") && tarballRoutes.has(url.slice(0, -".sha256".length))) {
-    res.writeHead(200, { "content-type": "text/plain" }).end(`${sha256}  ${url.slice(1, -".sha256".length)}\n`);
+    res
+      .writeHead(200, { "content-type": "text/plain" })
+      .end(head ? undefined : `${sha256}  ${url.slice(1, -".sha256".length)}\n`);
   } else {
     res.writeHead(403).end("Forbidden");
   }

@@ -39,6 +39,13 @@ test("normalizeVersion strips a leading v", () => {
   assert.equal(normalizeVersion("v0.3.0"), "0.3.0");
   assert.equal(normalizeVersion("0.3.0"), "0.3.0");
   assert.equal(normalizeVersion("latest"), "latest");
+  assert.equal(normalizeVersion("0.3.1-beta.1"), "0.3.1-beta.1");
+});
+
+test("normalizeVersion rejects path-traversal and separator inputs", () => {
+  for (const bad of ["../../evil", "0.3.0/../../x", "a/b", "..", ".hidden", "-flag"]) {
+    assert.throws(() => normalizeVersion(bad), /Invalid version/, bad);
+  }
 });
 
 test("pruneVersions never removes protected versions", (t) => {
