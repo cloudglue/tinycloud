@@ -137,8 +137,10 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   remaining CDN uploads — installs warn-but-proceed without them, and the
   publish-npm gate requires them.
 - `publish-npm.yml` (tag `v*`): asserts tag == package.json version → gates
-  on `generate-manifest.mjs --check` against the live CDN → publishes with
-  provenance (`NPM_TOKEN` secret).
+  on `generate-manifest.mjs --check` against the live CDN → publishes via
+  npm trusted publishing (OIDC, `id-token: write`, npm ≥ 11.5.1 — no token
+  secret; provenance is automatic). The trusted-publisher connection is
+  configured on the npm package settings page (workflow `publish-npm.yml`).
 
 ## Verifying changes
 

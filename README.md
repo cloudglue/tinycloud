@@ -119,7 +119,7 @@ when available and always **fail closed on a mismatch**. Set
 
 ## Maintainers: release runbook
 
-1. Upstream release uploads `tinycloud-<platform>-<version>.tar.gz` (×4) and
+1. Upstream release uploads `tinycloud-<platform>-v<version>.tar.gz` (×4) and
    refreshes the `tinycloud-<platform>.tar.gz` latest aliases on the CDN.
 2. Generate and upload the manifest + sidecars:
    ```bash
@@ -129,7 +129,13 @@ when available and always **fail closed on a mismatch**. Set
    ```
 3. In this repo: bump `package.json` to `<version>`, commit, tag `v<version>`,
    push. The `publish-npm` workflow verifies the CDN and publishes
-   `@cloudglue/tinycloud` (requires the `NPM_TOKEN` secret).
+   `@cloudglue/tinycloud` via npm
+   [trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC —
+   no token secret). One-time setup: on npmjs.com → package → Settings →
+   Trusted Publisher → GitHub Actions with org `cloudglue`, repo
+   `tinycloud`, workflow `publish-npm.yml` (fields are case-sensitive; the
+   very first publish of the package may need to be manual —
+   `npm publish --access public` — before the settings page exists).
 
 Wrapper-only emergency fixes publish as `<version>-wrapper.N` with the
 `latest` dist-tag moved manually.
