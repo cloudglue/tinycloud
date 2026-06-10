@@ -44,13 +44,20 @@ async function cmdInstall(args, target) {
     else throw new Error(`Unknown install option: ${args[i]} (expected --version <v>, --latest, or --prune)`);
   }
   if (latest && version) throw new Error("install options --version and --latest cannot be used together");
+  if (prune && (latest || version)) {
+    // Combining an install spec with --prune is ambiguous (two Bugbot
+    // findings pulled opposite ways here): --prune is standalone cache
+    // maintenance. `tinycloud update` is install-latest-and-prune.
+    throw new Error(
+      "--prune is a standalone action: run the install first, then `tinycloud install --prune` (or use `tinycloud update`)"
+    );
+  }
   if (prune) {
-    // Parsed after the full arg loop so `install --version X --prune`
-    // protects X as well as the run path's pinned version. A "latest" pin
-    // is resolved to its concrete version — the literal string would never
-    // match a versions/<semver>/ cache dir, leaving the tree latest
-    // actually runs unprotected.
-    let protect = [version, pickVersionSafe()].filter(Boolean);
+    // Protect what the run path resolves to (env pin / wrapper-version /
+    // package default). A "latest" pin is resolved to its concrete version —
+    // the literal string would never match a versions/<semver>/ cache dir,
+    // leaving the tree latest actually runs unprotected.
+    let protect = [pickVersionSafe()].filter(Boolean);
     if (protect.includes("latest")) {
       const manifest = await fetchManifest().catch(() => null);
       const stable = manifest && manifest.channels && manifest.channels.stable;

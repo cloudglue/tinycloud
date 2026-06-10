@@ -287,7 +287,9 @@ for entry in "${INSTALL_DIR:?}"/* "${INSTALL_DIR:?}"/.*; do
   name="$(basename "$entry")"
   [ -e "$entry" ] || continue
   case "$name" in
-    .|..) ;;
+    # Hidden housekeeping files (.DS_Store etc.) are neutral: they neither
+    # prove nor disprove ownership, and cleanup never touches them.
+    .*) ;;
     tinycloud|LICENSE.md|THIRD_PARTY_NOTICES.md)
       HAS_ENTRIES=1
       [ -d "$entry" ] && { DEDICATED=0; break; }
@@ -330,6 +332,18 @@ if [ -x "${INSTALL_DIR}/tinycloud" ]; then
     zsh)  RC_FILE="$HOME/.zshrc" ;;
     bash) RC_FILE="$HOME/.bashrc" ;;
     fish) RC_FILE="$HOME/.config/fish/config.fish" ;;
+  esac
+
+  # The install dir gets embedded in shell rc lines that every future shell
+  # sources — never write a path whose characters could escape the quoting
+  # and execute as code. Spaces and ordinary path characters are fine.
+  case "$INSTALL_DIR" in
+    *[\"\'\`\$\;\&\|\<\>\(\)\\]*|*'
+'*)
+      echo "Note: the install directory contains shell metacharacters; not" >&2
+      echo "editing ${RC_FILE:-your shell rc}. Add it to PATH yourself." >&2
+      RC_FILE=""
+      ;;
   esac
 
   if [ -n "$RC_FILE" ]; then
