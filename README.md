@@ -62,7 +62,7 @@ npx @cloudglue/tinycloud skills install --skill tinycloud,blog-post   # just som
 
 ```text
 /plugin marketplace add cloudglue/tinycloud
-/plugin install tinycloud@tinycloud
+/plugin install tinycloud@cloudglue
 ```
 
 Also works with the generic installer (`npx skills add cloudglue/tinycloud`)
