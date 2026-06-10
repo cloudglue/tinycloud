@@ -269,31 +269,47 @@ fi
 echo "Extracting to ${INSTALL_DIR}..."
 mkdir -p "$INSTALL_DIR"
 
-# Remove stale root distribution files so upgrades never leave ghost files
-# behind — but ONLY when the directory is clearly a dedicated tinycloud
-# install dir. Directory names like bin/, skills/, or workflows/ are too
-# generic to prove ownership, so their presence makes the directory mixed and
-# skips cleanup rather than risking user data.
+# Remove stale distribution assets so upgrades never leave ghost files behind
+# (e.g. a skill directory the new version dropped). Three safety rules:
+#   1. Cleanup runs only in a clearly dedicated tinycloud dir: every entry
+#      must be a distribution name AND the `tinycloud` binary file must be
+#      present as positive proof of a prior install (an empty dir is fine
+#      too — nothing to clean). A shared prefix like /usr/local has foreign
+#      entries and is skipped with a warning.
+#   2. Distribution-conceptual dirs (skills/, workflows/, licenses/) are
+#      replaced wholesale — the extract fully regenerates them.
+#   3. Inside bin/ only the distribution's known tool names are removed,
+#      never the directory — a user may have dropped their own files there.
 # (${INSTALL_DIR:?} guards against expanding to /bin etc. if it were empty)
 DEDICATED=1
+HAS_ENTRIES=0
 for entry in "${INSTALL_DIR:?}"/* "${INSTALL_DIR:?}"/.*; do
   name="$(basename "$entry")"
   [ -e "$entry" ] || continue
   case "$name" in
     .|..) ;;
     tinycloud|LICENSE.md|THIRD_PARTY_NOTICES.md)
-      if [ -d "$entry" ]; then
-        DEDICATED=0
-        break
-      fi
+      HAS_ENTRIES=1
+      [ -d "$entry" ] && { DEDICATED=0; break; }
+      ;;
+    bin|skills|workflows|licenses)
+      HAS_ENTRIES=1
+      [ -d "$entry" ] || { DEDICATED=0; break; }
       ;;
     *) DEDICATED=0; break ;;
   esac
 done
+if [ "$HAS_ENTRIES" -eq 1 ] && [ ! -f "${INSTALL_DIR}/tinycloud" ]; then
+  # Entries look distribution-shaped but there's no binary proving a prior
+  # tinycloud install — don't touch anything.
+  DEDICATED=0
+fi
 if [ "$DEDICATED" -eq 1 ]; then
   rm -f "${INSTALL_DIR:?}/tinycloud" "${INSTALL_DIR:?}/LICENSE.md" \
         "${INSTALL_DIR:?}/THIRD_PARTY_NOTICES.md"
-else
+  rm -rf "${INSTALL_DIR:?}/skills" "${INSTALL_DIR:?}/workflows" "${INSTALL_DIR:?}/licenses"
+  rm -f "${INSTALL_DIR:?}/bin/bun" "${INSTALL_DIR:?}/bin/ffmpeg" "${INSTALL_DIR:?}/bin/ffprobe"
+elif [ "$HAS_ENTRIES" -eq 1 ]; then
   echo "Warning: ${INSTALL_DIR} contains files that are not part of a tinycloud" >&2
   echo "install; skipping stale-asset cleanup (files from older tinycloud" >&2
   echo "versions may remain). A dedicated directory is recommended." >&2

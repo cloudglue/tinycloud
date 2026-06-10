@@ -232,6 +232,30 @@ test("install.sh preserves user-owned common directories", { timeout: 120_000 },
   assert.equal(fs.readFileSync(path.join(userBin, "user-tool"), "utf8"), "keep\n");
 });
 
+test("install.sh upgrade removes ghost files from prior versions", { timeout: 120_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-install-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+  const { child, url } = await startFixture(tarball);
+  t.after(() => child.kill());
+
+  const installDir = path.join(work, "bin");
+  const env = { ...process.env, HOME: path.join(work, "home"), SHELL: "/bin/sh", TINYCLOUD_DIST_URL: url };
+
+  // first install, then plant a ghost (a skill dir the "old version" shipped)
+  execFileSync("bash", [installScript, "--install-dir", installDir, "--version", VERSION], { encoding: "utf8", env });
+  const ghost = path.join(installDir, "skills", "removed-in-new-version");
+  fs.mkdirSync(ghost, { recursive: true });
+  fs.writeFileSync(path.join(ghost, "SKILL.md"), "ghost\n");
+
+  const out = execFileSync("bash", [installScript, "--install-dir", installDir, "--version", VERSION], {
+    encoding: "utf8",
+    env,
+  });
+  assert.ok(!fs.existsSync(ghost), "stale skill dir removed on upgrade");
+  assert.ok(!out.includes("not part of a tinycloud"), "no mixed-dir warning on a normal upgrade");
+});
+
 test("v-prefixed version and broken cache dir both recover", { timeout: 120_000 }, async (t) => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
   t.after(() => fs.rmSync(work, { recursive: true, force: true }));
