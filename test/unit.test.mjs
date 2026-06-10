@@ -8,7 +8,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const { resolveTarget, PlatformError } = require("../lib/platform.js");
 const { tarballName, baseUrl, DEFAULT_BASE } = require("../lib/manifest.js");
-const { normalizeVersion, pruneVersions } = require("../lib/installer.js");
+const { normalizeVersion, pruneVersions, isInstalled } = require("../lib/installer.js");
 
 test("resolveTarget maps supported platforms", () => {
   assert.equal(resolveTarget("darwin", "arm64"), "darwin-arm64");
@@ -63,6 +63,30 @@ test("pruneVersions never removes protected versions", (t) => {
   const removed = pruneVersions(2, ["v0.1.0"]);
   assert.deepEqual(removed, ["0.2.0"]);
   assert.ok(fs.existsSync(path.join(root, "versions", "0.1.0", ".ok")), "protected version kept");
+});
+
+test("isInstalled is platform-aware (synced cache roots)", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "tc-plat-"));
+  t.after(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+    delete process.env.TINYCLOUD_INSTALL_DIR;
+  });
+  process.env.TINYCLOUD_INSTALL_DIR = root;
+  const dir = path.join(root, "versions", "0.3.0");
+  fs.mkdirSync(dir, { recursive: true });
+
+  fs.writeFileSync(path.join(dir, ".ok"), JSON.stringify({ version: "0.3.0", target: "linux-x64" }));
+  assert.equal(isInstalled("0.3.0"), true, "no target → presence check");
+  assert.equal(isInstalled("0.3.0", "linux-x64"), true);
+  assert.equal(isInstalled("0.3.0", "darwin-arm64"), false, "other platform's extract is not a hit");
+
+  // legacy .ok without platform: infer from recorded URL
+  fs.writeFileSync(
+    path.join(dir, ".ok"),
+    JSON.stringify({ version: "0.3.0", url: "https://x/tinycloud-darwin-arm64-v0.3.0.tar.gz" })
+  );
+  assert.equal(isInstalled("0.3.0", "darwin-arm64"), true);
+  assert.equal(isInstalled("0.3.0", "linux-x64"), false);
 });
 
 test("baseUrl honors TINYCLOUD_DIST_URL and strips trailing slash", () => {

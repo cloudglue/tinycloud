@@ -31,7 +31,9 @@ async function cmdInstall(args, target) {
     else throw new Error(`Unknown install option: ${args[i]} (expected --version <v>, --latest, or --prune)`);
   }
   if (prune) {
-    const removed = pruneVersions(2, [pickVersion(), version]);
+    // Parsed after the full arg loop so `install --version X --prune`
+    // protects X as well as the run path's pinned version.
+    const removed = pruneVersions(2, [version, pickVersion()]);
     console.log(removed.length ? `Pruned: ${removed.join(", ")}` : "Nothing to prune.");
     return;
   }
@@ -51,7 +53,7 @@ async function cmdUpdate(target) {
   if (!manifest) throw new Error("`update` requires the release manifest, which is not available");
   const version = normalizeVersion(manifest.channels && manifest.channels.stable);
   if (!version) throw new Error("The release manifest has no stable version");
-  const alreadyCurrent = isInstalled(version);
+  const alreadyCurrent = isInstalled(version, target);
   const res = await ensureInstalled(version, target);
   writeOverrideVersion(res.version);
   // Protect both the new stable and whatever the run path still resolves to
