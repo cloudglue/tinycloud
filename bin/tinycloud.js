@@ -20,27 +20,40 @@ function pickVersion() {
   return normalizeVersion(process.env.TINYCLOUD_VERSION || readOverrideVersion() || pkg.version);
 }
 
+/**
+ * pickVersion() for advisory uses (prune-protect lists): a malformed
+ * TINYCLOUD_VERSION should fail the run path loudly, but it must not crash
+ * an install/update that never needed it.
+ */
+function pickVersionSafe() {
+  try {
+    return pickVersion();
+  } catch {
+    return null;
+  }
+}
+
 async function cmdInstall(args, target) {
-  let version = pickVersion(); // honor TINYCLOUD_VERSION / wrapper-version, like the run path
-  let explicitVersion = false;
+  let version = null;
   let latest = false;
   let prune = false;
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--version" && args[i + 1]) {
-      explicitVersion = true;
-      version = normalizeVersion(args[++i]);
-    } else if (args[i] === "--latest") latest = true;
+    if (args[i] === "--version" && args[i + 1]) version = normalizeVersion(args[++i]);
+    else if (args[i] === "--latest") latest = true;
     else if (args[i] === "--prune") prune = true;
     else throw new Error(`Unknown install option: ${args[i]} (expected --version <v>, --latest, or --prune)`);
   }
-  if (latest && explicitVersion) throw new Error("install options --version and --latest cannot be used together");
+  if (latest && version) throw new Error("install options --version and --latest cannot be used together");
   if (prune) {
     // Parsed after the full arg loop so `install --version X --prune`
     // protects X as well as the run path's pinned version.
-    const removed = pruneVersions(2, [version, pickVersion()]);
+    const removed = pruneVersions(2, [version, pickVersionSafe()].filter(Boolean));
     console.log(removed.length ? `Pruned: ${removed.join(", ")}` : "Nothing to prune.");
     return;
   }
+  // An explicit --version wins without consulting the env/override, so a
+  // malformed TINYCLOUD_VERSION can't block an explicit install.
+  if (!version && !latest) version = pickVersion();
   if (latest) {
     const manifest = await fetchManifest();
     if (!manifest) throw new Error("`install --latest` requires the release manifest, which is not available");
@@ -61,8 +74,9 @@ async function cmdUpdate(target) {
   const res = await ensureInstalled(version, target);
   writeOverrideVersion(res.version);
   // Protect both the new stable and whatever the run path still resolves to
-  // (e.g. a TINYCLOUD_VERSION env pin).
-  const removed = pruneVersions(2, [res.version, pickVersion()]);
+  // (e.g. a TINYCLOUD_VERSION env pin). Advisory only — a malformed env
+  // value must not fail an update that already completed.
+  const removed = pruneVersions(2, [res.version, pickVersionSafe()].filter(Boolean));
   console.log(
     alreadyCurrent
       ? `tinycloud ${res.version} is already current (${res.dir})`

@@ -280,6 +280,22 @@ test("v-prefixed version and broken cache dir both recover", { timeout: 120_000 
   assert.ok(fs.existsSync(path.join(installRoot, "versions", VERSION, ".ok")), "broken dir reclaimed");
 });
 
+test("malformed TINYCLOUD_VERSION doesn't break explicit install/prune", { timeout: 30_000 }, (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-badenv-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  for (const v of ["0.1.0", "0.2.0", "0.3.0"]) {
+    fs.mkdirSync(path.join(work, "versions", v), { recursive: true });
+    fs.writeFileSync(path.join(work, "versions", v, ".ok"), "{}");
+  }
+  // prune with a garbage env pin: must still work, protecting the explicit version
+  const res = runLauncher(["install", "--version", "0.1.0", "--prune"], {
+    TINYCLOUD_INSTALL_DIR: work,
+    TINYCLOUD_VERSION: "../../bad",
+  });
+  assert.equal(res.code, 0, res.stderr);
+  assert.ok(fs.existsSync(path.join(work, "versions", "0.1.0", ".ok")), "explicit version protected");
+});
+
 test("TINYCLOUD_VERSION traversal input fails closed", { timeout: 30_000 }, async (t) => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
   t.after(() => fs.rmSync(work, { recursive: true, force: true }));
