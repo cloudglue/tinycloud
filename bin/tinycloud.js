@@ -46,8 +46,23 @@ async function cmdInstall(args, target) {
   if (latest && version) throw new Error("install options --version and --latest cannot be used together");
   if (prune) {
     // Parsed after the full arg loop so `install --version X --prune`
-    // protects X as well as the run path's pinned version.
-    const removed = pruneVersions(2, [version, pickVersionSafe()].filter(Boolean));
+    // protects X as well as the run path's pinned version. A "latest" pin
+    // is resolved to its concrete version — the literal string would never
+    // match a versions/<semver>/ cache dir, leaving the tree latest
+    // actually runs unprotected.
+    let protect = [version, pickVersionSafe()].filter(Boolean);
+    if (protect.includes("latest")) {
+      const manifest = await fetchManifest().catch(() => null);
+      const stable = manifest && manifest.channels && manifest.channels.stable;
+      const resolved = stable ? normalizeVersion(stable) : null;
+      protect = protect.map((p) => (p === "latest" ? resolved : p)).filter(Boolean);
+      if (!resolved) {
+        process.stderr.write(
+          "tinycloud: cannot resolve the 'latest' pin without the release manifest — pruning by age only\n"
+        );
+      }
+    }
+    const removed = pruneVersions(2, protect);
     console.log(removed.length ? `Pruned: ${removed.join(", ")}` : "Nothing to prune.");
     return;
   }
@@ -75,8 +90,10 @@ async function cmdUpdate(target) {
   writeOverrideVersion(res.version);
   // Protect both the new stable and whatever the run path still resolves to
   // (e.g. a TINYCLOUD_VERSION env pin). Advisory only — a malformed env
-  // value must not fail an update that already completed.
-  const removed = pruneVersions(2, [res.version, pickVersionSafe()].filter(Boolean));
+  // value must not fail an update that already completed. A "latest" pin
+  // resolves to the stable we just installed.
+  const pinned = pickVersionSafe();
+  const removed = pruneVersions(2, [res.version, pinned === "latest" ? res.version : pinned].filter(Boolean));
   console.log(
     alreadyCurrent
       ? `tinycloud ${res.version} is already current (${res.dir})`

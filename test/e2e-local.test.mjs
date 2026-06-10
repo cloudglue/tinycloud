@@ -296,6 +296,32 @@ test("malformed TINYCLOUD_VERSION doesn't break explicit install/prune", { timeo
   assert.ok(fs.existsSync(path.join(work, "versions", "0.1.0", ".ok")), "explicit version protected");
 });
 
+test("prune protects the tree a 'latest' pin resolves to", { timeout: 60_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-latestpin-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+  // fixture manifest: channels.stable = 0.3.0
+  const { child, url } = await startFixture(tarball);
+  t.after(() => child.kill());
+
+  // 0.3.0 (= stable) is OLDER than other healthy caches: without resolving
+  // the pin, keep-2 would delete it.
+  for (const v of ["0.3.0", "0.8.0", "0.9.0"]) {
+    const dir = path.join(work, "versions", v);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, ".ok"), "{}");
+    fs.writeFileSync(path.join(dir, "tinycloud"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  }
+
+  const res = runLauncher(["install", "--prune"], {
+    TINYCLOUD_DIST_URL: url,
+    TINYCLOUD_INSTALL_DIR: work,
+    TINYCLOUD_VERSION: "latest",
+  });
+  assert.equal(res.code, 0, res.stderr);
+  assert.ok(fs.existsSync(path.join(work, "versions", "0.3.0", ".ok")), "latest-resolved stable kept");
+});
+
 test("TINYCLOUD_VERSION traversal input fails closed", { timeout: 30_000 }, async (t) => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
   t.after(() => fs.rmSync(work, { recursive: true, force: true }));
