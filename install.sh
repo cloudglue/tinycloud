@@ -68,6 +68,20 @@ done
 VERSION="${VERSION#v}"
 [ "$VERSION" = "latest" ] && VERSION=""
 
+# Version strings end up in URLs and file paths — reject anything that isn't
+# a plain version token (same rule as the npm launcher's normalizeVersion).
+validate_version() {
+  case "$1" in
+    "") return 0 ;;
+    [0-9A-Za-z]*) ;;
+    *) echo "Error: invalid version \"$1\" (expected a version like 0.3.0)" >&2; exit 1 ;;
+  esac
+  case "$1" in
+    *[!0-9A-Za-z.+_-]*) echo "Error: invalid version \"$1\" (expected a version like 0.3.0)" >&2; exit 1 ;;
+  esac
+}
+validate_version "$VERSION"
+
 case "$CHANNEL" in
   stable|beta) ;;
   *) echo "Error: Unknown channel: $CHANNEL (expected stable | beta)" >&2; exit 1 ;;
@@ -171,7 +185,7 @@ if [ "$HAVE_MANIFEST" -eq 1 ] && [ "$HAVE_PY3" -eq 1 ]; then
       exit 1
     fi
     # Manifest-resolved versions get the same v-normalization as user input
-    VERSION="${VERSION#v}"
+    VERSION="${VERSION#v}"; validate_version "$VERSION"
   fi
   URL="$(json_get "$MANIFEST_FILE" versions "$VERSION" platforms "$PLATFORM" url || true)"
   EXPECTED_SHA256="$(json_get "$MANIFEST_FILE" versions "$VERSION" platforms "$PLATFORM" sha256 || true)"
@@ -192,7 +206,7 @@ elif [ "$HAVE_MANIFEST" -eq 1 ]; then
       exit 1
     fi
     # Manifest-resolved versions get the same v-normalization as user input
-    VERSION="${VERSION#v}"
+    VERSION="${VERSION#v}"; validate_version "$VERSION"
   fi
   TARBALL="tinycloud-${PLATFORM}-v${VERSION}.tar.gz"
   URL="${BASE_URL}/${TARBALL}"
@@ -254,11 +268,31 @@ fi
 # --- Install --------------------------------------------------------------
 echo "Extracting to ${INSTALL_DIR}..."
 mkdir -p "$INSTALL_DIR"
+
 # Remove stale distribution assets so upgrades never leave ghost files behind
+# — but ONLY when the directory is clearly a dedicated tinycloud install dir
+# (every entry belongs to the distribution). Wiping entry names like bin/
+# inside a shared prefix such as --install-dir /usr/local would destroy
+# unrelated files, so a mixed directory skips the cleanup instead.
 # (${INSTALL_DIR:?} guards against expanding to /bin etc. if it were empty)
-rm -rf "${INSTALL_DIR:?}/tinycloud" "${INSTALL_DIR:?}/bin" "${INSTALL_DIR:?}/skills" \
-       "${INSTALL_DIR:?}/workflows" "${INSTALL_DIR:?}/licenses" \
-       "${INSTALL_DIR:?}/LICENSE.md" "${INSTALL_DIR:?}/THIRD_PARTY_NOTICES.md"
+DEDICATED=1
+for entry in "${INSTALL_DIR:?}"/* "${INSTALL_DIR:?}"/.*; do
+  name="$(basename "$entry")"
+  [ -e "$entry" ] || continue
+  case "$name" in
+    .|..|tinycloud|bin|skills|workflows|licenses|LICENSE.md|THIRD_PARTY_NOTICES.md) ;;
+    *) DEDICATED=0; break ;;
+  esac
+done
+if [ "$DEDICATED" -eq 1 ]; then
+  rm -rf "${INSTALL_DIR:?}/tinycloud" "${INSTALL_DIR:?}/bin" "${INSTALL_DIR:?}/skills" \
+         "${INSTALL_DIR:?}/workflows" "${INSTALL_DIR:?}/licenses" \
+         "${INSTALL_DIR:?}/LICENSE.md" "${INSTALL_DIR:?}/THIRD_PARTY_NOTICES.md"
+else
+  echo "Warning: ${INSTALL_DIR} contains files that are not part of a tinycloud" >&2
+  echo "install; skipping stale-asset cleanup (files from older tinycloud" >&2
+  echo "versions may remain). A dedicated directory is recommended." >&2
+fi
 tar -xzf "${TMP_DIR}/${TARBALL}" -C "$INSTALL_DIR"
 
 if [ -x "${INSTALL_DIR}/tinycloud" ]; then
