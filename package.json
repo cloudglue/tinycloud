@@ -21,7 +21,7 @@
     "type": "git",
     "url": "git+https://github.com/cloudglue/tinycloud.git"
   },
-  "homepage": "https://cloudglue.dev",
+  "homepage": "https://tinycloud.sh",
   "keywords": ["video", "cloudglue", "cli", "agent", "captions", "clips"],
   "license": "SEE LICENSE IN LICENSE.md"
 }

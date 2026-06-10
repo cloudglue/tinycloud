@@ -45,7 +45,7 @@ Envelope schema version: `"1"` (reported in `--version --json` as
 | `pending` | 0 | `meta.job_id` set | `tinycloud jobs wait <id> --timeout 120s --json`; do NOT start downstream work |
 | `paused` | 0 | `resume` present | stop; surface resume info (resume not automated in 0.3.x) |
 | `needs_credentials` | 2 | `setup` present | run `setup.command` or set `setup.env` |
-| `needs_upload` | 3 | — | cloud upload required (costs money); rerun without `--no-upload` after confirming |
+| `needs_upload` | 3 | — | cloud upload required (runs through the user's Cloudglue account); rerun without `--no-upload` after confirming |
 | `needs_download` | 3 | — | materialize locally first (`tinycloud grab …`) |
 | `error` | 1 | `error` present | stop; report `error.message`; retry only if `error.retryable` |
 

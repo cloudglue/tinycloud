@@ -3,27 +3,31 @@
 ## Install
 
 ```bash
-# Latest stable
-curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash
-
-# Pinned version
-curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash -s -- --version 0.3.0
-
-# npm / npx (downloads the binary on first run)
-npm install -g @cloudglue/tinycloud
+npm install -g @cloudglue/tinycloud     # then run: tinycloud
+# or run directly without installing:
 npx @cloudglue/tinycloud --version --json
 ```
 
-The curl installer puts the binary at `~/.tinycloud/bin/tinycloud` (override
-with `TINYCLOUD_INSTALL_DIR`) and adds it to your shell PATH. The npm wrapper
-caches full distributions under `~/.tinycloud/versions/<version>/`.
+The npm package is a small launcher: on first run it downloads the matching
+platform distribution (cached under `~/.tinycloud/versions/<version>/`),
+verifies its checksum, and execs the real binary. The package version pins
+the binary version, so `npx @cloudglue/tinycloud@<v>` always runs that exact
+tinycloud. `tinycloud update` moves to the latest release.
+
+Alternative (shell installer, installs to `~/.tinycloud/bin`):
+
+```bash
+curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash
+```
 
 Platforms: macOS (arm64, x64) and Linux (x64, arm64). Windows is not
-supported — use WSL2.
+supported — use WSL2. More at https://tinycloud.sh.
 
 ## Credentials
 
-Cloud verbs (`watch extract probe ask publish`) need a Cloudglue API key:
+Cloud verbs (`watch extract probe ask publish`) need a Cloudglue API key.
+Usage is billed to that key per the
+[rate card](https://app.cloudglue.dev/home/billing/rate-card).
 
 ```bash
 tinycloud setup cloudglue --api-key <key>     # persist the key
@@ -46,8 +50,8 @@ Returns (annotated):
 {
   "name": "tinycloud",
   "version": "0.3.0",            // semver — compare against min_version
-  "git_sha": "57a775b",
-  "build_id": "0.3.0+57a775b",
+  "git_sha": "…",
+  "build_id": "0.3.0+…",
   "channel": "stable",
   "platform": "darwin",
   "arch": "arm64",
@@ -89,4 +93,5 @@ binary reports in `--version --json`.
 | Variable | Effect |
 |---|---|
 | `CLOUDGLUE_API_KEY` | Cloudglue API key (alternative to `tinycloud setup cloudglue`) |
-| `TINYCLOUD_INSTALL_DIR` | curl installer: target bin dir (default `~/.tinycloud/bin`) |
+| `TINYCLOUD_VERSION` | npm launcher: run a specific binary version |
+| `TINYCLOUD_INSTALL_DIR` | npm launcher: cache root (default `~/.tinycloud`) |

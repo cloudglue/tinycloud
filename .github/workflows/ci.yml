@@ -4,8 +4,8 @@ on:
   pull_request:
   push:
     branches: [main]
-  schedule:
-    - cron: "17 9 * * *" # daily drift detection against the live CDN
+  # Live-CDN checks run on demand: Actions tab → CI → "Run workflow"
+  # (optionally with a version), or on any push to main.
   workflow_dispatch:
     inputs:
       version:
@@ -72,7 +72,7 @@ jobs:
     name: Install + smoke (${{ matrix.os }}, ${{ matrix.version || 'latest' }})
     runs-on: ${{ matrix.os }}
     # Live-CDN checks don't gate PRs (a CDN gap would fail every PR); they run
-    # on the daily schedule, pushes to main, and manual dispatch instead.
+    # on pushes to main and manual dispatch instead.
     if: github.event_name != 'pull_request'
     strategy:
       fail-fast: false

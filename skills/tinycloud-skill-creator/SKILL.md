@@ -19,9 +19,14 @@ and workflows, but their OUTPUT is a deliverable consumed outside the
 conversation: an HTML page, a markdown doc, a JSON payload, clip files,
 captions, a published site URL. Author for that external consumer.
 
-Prerequisite: the `tinycloud` skill in this repo (CLI usage, envelope
-contract). Run its `scripts/preflight.sh` first. Recipe YAML schema:
-[../tinycloud/reference/workflow-authoring.md](../tinycloud/reference/workflow-authoring.md).
+Prerequisite: the tinycloud CLI configured with a Cloudglue API key. If the
+general `tinycloud` skill is installed alongside this one, run its
+`scripts/preflight.sh` first; otherwise check
+`tinycloud setup --check --json` → `data.ok` (install:
+`npm install -g @cloudglue/tinycloud`, see https://tinycloud.sh). For the
+recipe YAML schema, use the `tinycloud` skill's reference/workflow-authoring.md
+if installed, or the schema reference bundled with the binary at
+`<install>/skills/skill-creator/references/workflow-schema.md`.
 
 ## 1. Interview
 
@@ -100,10 +105,11 @@ tinycloud workflow run <dir>/<skill-name>/<skill-name>.yaml <test-source> --allo
 ```
 
 `validate` checks the recipe (free), `plan` resolves the graph with no side
-effects (free), `run` executes (cloud steps cost money). Branch on the
-envelope `status` — `ready` means consume `data.outputs`; anything else
-means stop and surface the next action. Open the produced deliverable and
-check it against the user's intent before declaring success.
+effects (free), `run` executes — cloud steps run through the configured
+Cloudglue API key. Branch on the envelope `status` — `ready` means consume
+`data.outputs`; anything else means stop and surface the next action. Open
+the produced deliverable and check it against the user's intent before
+declaring success.
 
 ## 5. Gate and distribute
 
@@ -112,8 +118,8 @@ check it against the user's intent before declaring success.
   always wins.
 - For skills distributed to other machines, gate on the installed binary:
   `tinycloud --version --json` reports `version` and `features` — document a
-  `min_version` in the skill (see this repo's
-  `skills/tinycloud/tinycloud-skill.json` for the manifest pattern).
+  `min_version` in the skill (the general `tinycloud` skill's
+  `tinycloud-skill.json` shows the manifest pattern, when installed).
 
 ## Iterating on an existing skill
 

@@ -30,7 +30,8 @@ It prints exactly one line telling you what to do: install, upgrade, configure
 credentials, or proceed. If `tinycloud` is missing entirely:
 
 ```bash
-curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash
+npm install -g @cloudglue/tinycloud
+# or: curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash
 ```
 
 Credentials (required for cloud verbs): `tinycloud setup cloudglue --api-key <key>`
@@ -49,7 +50,7 @@ credentials), `error` (`{code, message, retryable}`).
 | `ready` | consume `data` / `ref` / file paths and continue |
 | `pending` | async job started — `tinycloud jobs wait <meta.job_id> --timeout 120s --json` |
 | `needs_credentials` | run the command in `setup.command` or set the env in `setup.env` |
-| `needs_upload` | cloud upload required (costs money) — rerun without `--no-upload` or confirm with the user |
+| `needs_upload` | cloud upload required (runs through the user's Cloudglue account) — rerun without `--no-upload` or confirm with the user |
 | `needs_download` | fetch locally first: `tinycloud grab <url> --json` |
 | `paused` | stop; surface `resume` info to the user (resume is not automated in 0.3.x) |
 | `error` | stop; report `error.message`; retry only if `error.retryable` |
@@ -60,8 +61,10 @@ Full schema and error codes: [reference/envelope.md](reference/envelope.md).
 
 ## 2. Core verbs (cheat sheet)
 
-Cloud verbs (`watch extract probe ask publish`) call Cloudglue and **cost
-money**; `search clip setup` are local and free; `grab jobs` are network-only.
+Cloud verbs (`watch extract probe ask publish`) call the Cloudglue API using
+the configured key — usage is billed per the
+[rate card](https://app.cloudglue.dev/home/billing/rate-card). `search clip
+setup` are local and free; `grab jobs` are network-only.
 `tinycloud commands --json` is the authoritative command/flag list.
 
 ```bash
@@ -145,3 +148,4 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
 - [reference/envelope.md](reference/envelope.md) — full envelope schema, statuses, error codes, exit codes
 - [reference/pipelines.md](reference/pipelines.md) — pipes, batching, jobs, cache/spend-control flags
 - [reference/workflow-authoring.md](reference/workflow-authoring.md) — workflow YAML schema and custom recipes
+- [reference/glossary.md](reference/glossary.md) — tinycloud/Cloudglue terms (files, collections, connectors, refs, …)

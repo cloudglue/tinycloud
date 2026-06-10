@@ -3,23 +3,9 @@
 Agent CLI for deep video work. Point it at videos and ask for analysis,
 dashboards, subtitles, clips, search, or repurposed content — or drive its
 verbs directly from your own agent. Powered by [Cloudglue](https://cloudglue.dev).
+Learn more at [tinycloud.sh](https://tinycloud.sh).
 
 ## Install
-
-### curl
-
-```bash
-# Latest stable
-curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash
-
-# Pinned version / channel
-curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash -s -- --version 0.3.0
-curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash -s -- --channel beta
-```
-
-Installs to `~/.tinycloud/bin` and adds it to your shell PATH.
-
-### npm / npx
 
 ```bash
 npm install -g @cloudglue/tinycloud     # then: tinycloud
@@ -37,6 +23,13 @@ wrapper commands:
 tinycloud install --version 0.3.0   # pre-download a version
 tinycloud install --latest          # install latest stable and pin to it
 tinycloud update                    # move to latest stable, prune old versions
+```
+
+Alternatively, the shell installer (installs to `~/.tinycloud/bin` and adds
+it to your PATH):
+
+```bash
+curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash
 ```
 
 Platforms: macOS (arm64, x64) and Linux (x64, arm64). Windows is not

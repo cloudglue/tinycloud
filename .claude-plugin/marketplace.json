@@ -7,18 +7,18 @@
   },
   "metadata": {
     "description": "Deep video work for coding agents: analyze, search, caption, clip, and publish video via the tinycloud CLI.",
-    "version": "0.1.0"
+    "version": "0.3.0"
   },
   "plugins": [
     {
       "name": "tinycloud",
       "source": "./",
       "description": "Video understanding and editing via the tinycloud CLI (Cloudglue): watch/extract/search/ask over videos, captions, clips, plus one-command workflows for sales coaching, blog posts, ad analysis, meeting breakdowns, and YouTube publishing.",
-      "version": "0.1.0",
+      "version": "0.3.0",
       "author": { "name": "Cloudglue" },
-      "homepage": "https://cloudglue.dev",
+      "homepage": "https://tinycloud.sh",
       "repository": "https://github.com/cloudglue/tinycloud",
-      "license": "SEE LICENSE IN LICENSE.md",
+      "license": "SEE LICENSE AT https://github.com/cloudglue/tinycloud/blob/main/LICENSE.md",
       "category": "media",
       "tags": ["video", "cloudglue", "transcription", "captions", "clips", "youtube"],
       "strict": true

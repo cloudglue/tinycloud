@@ -51,7 +51,9 @@ support `--background`.
 
 ## Spend control
 
-Cloud verbs cost Cloudglue credits. Patterns to control spend:
+Cloud verbs run through the configured Cloudglue API key (usage per the
+[rate card](https://app.cloudglue.dev/home/billing/rate-card)). Patterns to
+control spend:
 
 ```bash
 # Refuse uploads: returns needs_upload instead of spending

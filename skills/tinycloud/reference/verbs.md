@@ -20,8 +20,8 @@ every verb. Regenerate doubts from it instead of trusting prose.
 | `publish` | cloud | yes | Publish HTML/code artifacts as Cloudglue Sites |
 | `setup` | local | no | Credentials and service connections |
 
-Cloud verbs spend Cloudglue credits. `caption`/`library`/`workflow` vary by
-what they end up doing.
+Cloud verbs run through the configured Cloudglue API key.
+`caption`/`library`/`workflow` vary by what they end up doing.
 
 ## Per-verb flags
 
@@ -108,7 +108,11 @@ tinycloud library connectors files <connector-id> [--limit 25] [--page-token <t>
 tinycloud library connectors sync <connector-id> <uri> --json   # e.g. grain://recording/<id>
 ```
 
-Collection IDs (`col_…`) are stable; collection names are display-only.
+`connectors files` also takes provider-specific filters: `--from`/`--to`
+(Zoom, Grain dates), `--folder-id` (Google Drive), `--path` (Dropbox),
+`--bucket`/`--prefix` (S3/GCS), `--title-search`/`--team`/`--meeting-type`
+(Grain). Collection IDs (`col_…`) are stable; collection names are
+display-only.
 
 ### jobs — async work
 
