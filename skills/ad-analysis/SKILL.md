@@ -5,10 +5,10 @@ description: >-
   classification, pacing, structure, CTA, and takeaways. Use when the user
   wants ad creative analysis, competitive ad research, or a hook/pacing/CTA
   breakdown of a commercial or social ad. Takes one source: a local video
-  file, URL, or Cloudglue file id. Runs the built-in tinycloud "ad-analysis"
+  file, URL, or cloudglue:// file URI (e.g. cloudglue://files/<id>). Runs the built-in tinycloud "ad-analysis"
   workflow; requires the tinycloud CLI configured with a Cloudglue API key
   (analysis runs through the user's Cloudglue account).
-argument-hint: "[ad video file, URL, or Cloudglue file id]"
+argument-hint: "[ad video file, URL, or cloudglue:// file URI]"
 arguments: source
 ---
 
@@ -41,7 +41,7 @@ inside the tinycloud binary (`watch → extract → render`).
    `tinycloud workflow plan ad-analysis $source --json` (free).
 
    ```bash
-   tinycloud workflow ad-analysis $source --allow-command --json
+   tinycloud workflow ad-analysis $source --json
    ```
 
    Useful params: `--param segment=shots` (default; shot-level timeline the

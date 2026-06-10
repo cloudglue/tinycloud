@@ -5,10 +5,10 @@ description: >-
   labels, chapter summaries, and action items from a meeting recording. Use
   when the user wants meeting notes, a recap, action items, or a who-said-what
   timeline from a recorded meeting or call. Takes one source: a local video
-  file, URL, or Cloudglue file id. Runs the built-in tinycloud
+  file, URL, or cloudglue:// file URI (e.g. cloudglue://files/<id>). Runs the built-in tinycloud
   "meeting-breakdown" workflow; requires the tinycloud CLI configured with a
   Cloudglue API key (analysis runs through the user's Cloudglue account).
-argument-hint: "[meeting recording file, URL, or Cloudglue file id]"
+argument-hint: "[meeting recording file, URL, or cloudglue:// file URI]"
 arguments: source
 ---
 
@@ -41,7 +41,7 @@ bundled inside the tinycloud binary (`watch → extract ×2 → render`).
    `tinycloud workflow plan meeting-breakdown $source --json` (free).
 
    ```bash
-   tinycloud workflow meeting-breakdown $source --allow-command --json
+   tinycloud workflow meeting-breakdown $source --json
    ```
 
    Useful params: `--param segment=chapters` (default; semantic meeting

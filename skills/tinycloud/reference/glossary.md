@@ -30,7 +30,8 @@ connector?" or an envelope field needs explaining.
   individual items by URI (e.g. `grain://recording/<id>`) so they become
   Cloudglue files.
 - **Source** — anything a verb accepts as input: a local path, URL,
-  Cloudglue file id, connector URI, or collection.
+  `cloudglue://files/<id>` URI, connector URI, or collection. Bare file-id
+  UUIDs are not accepted — wrap them as `cloudglue://files/<id>`.
 - **`ref` / `source_id` / `result_id`** — stable identifiers in every
   envelope. `ref` is a reusable pointer to the analyzed source (including
   `cloud_ready` and the Cloudglue file id) that pipes between verbs;

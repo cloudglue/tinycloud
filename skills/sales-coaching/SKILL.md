@@ -5,10 +5,10 @@ description: >-
   scores, speech metrics, objections, and improvement areas. Use when the
   user wants sales-call analysis, call coaching, or rep feedback from a
   video/audio recording. Takes one source: a local video file, URL, or
-  Cloudglue file id. Runs the built-in tinycloud "sales-coaching" workflow;
+  cloudglue:// file URI (e.g. cloudglue://files/<id>). Runs the built-in tinycloud "sales-coaching" workflow;
   requires the tinycloud CLI configured with a Cloudglue API key (analysis
   runs through the user's Cloudglue account).
-argument-hint: "[sales call video file, URL, or Cloudglue file id]"
+argument-hint: "[sales call video file, URL, or cloudglue:// file URI]"
 arguments: source
 ---
 
@@ -41,11 +41,11 @@ bundled inside the tinycloud binary (`watch → extract ×2 → render`).
    `tinycloud workflow plan sales-coaching $source --json` (free).
 
    ```bash
-   tinycloud workflow sales-coaching $source --allow-command --json
+   tinycloud workflow sales-coaching $source --json
    ```
 
-   `--allow-command` permits the final local render step. Useful params:
-   `--param segment=chapters` (default; semantic call phases) or
+   (The recipe self-permits its local render step — no extra flag needed.)
+   Useful params: `--param segment=chapters` (default; semantic call phases) or
    `--param segment=uniform:20` for dense fixed intervals;
    `--param out=<path>` to control the HTML location.
 

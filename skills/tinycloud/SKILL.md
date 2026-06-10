@@ -112,22 +112,27 @@ directory:
 tinycloud workflow list --json
 tinycloud workflow validate sales-coaching --json
 tinycloud workflow plan sales-coaching ./call.mp4 --json     # resolves the graph; free, no side effects
-tinycloud workflow sales-coaching ./call.mp4 --allow-command --json
+tinycloud workflow sales-coaching ./call.mp4 --json
 ```
 
 Parse the final envelope: `data.status` (`completed|partial|failed|paused`),
 `data.outputs` (named outputs, e.g. `outputs.html`), `data.artifacts[].path`.
 Files land under `./tinycloud-output/runs/<run_id>/`. Recipe render steps run
-local scripts, gated by `--allow-command` (or the recipe's
-`permissions: [command]`); `--no-command` always disables them.
+local scripts: built-in recipes self-permit them (`permissions: [command]`),
+so no extra flag is needed; pass `--allow-command` only for a recipe run by
+path that lacks that permission. `--no-command` always disables them.
 Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow-authoring.md).
 
 ## 4. Gotchas
 
 - Machine output is stdout; logs/progress are stderr. Keep stderr visible for
   debugging, but never parse it.
-- Workflows with render steps need `--allow-command` (built-in recipes declare
-  `permissions: [command]`, but pass the flag explicitly to be unambiguous).
+- Built-in recipes already permit their render steps (`permissions:
+  [command]`) — don't add `--allow-command` for them (host-agent permission
+  classifiers may flag it); it's only needed for path-run recipes without
+  that permission.
+- Sources: local paths, URLs, `cloudglue://files/<id>` URIs, or
+  `collection:col_…` — a bare file-id UUID is not accepted.
 - Do not pass `--background` to `ask`; background jobs exist only for tracked
   async ops (`watch`, `extract`).
 - `workflow status` / `workflow resume` are not implemented in 0.3.x; treat

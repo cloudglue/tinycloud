@@ -5,10 +5,10 @@ description: >-
   chapter markers, tags, SRT subtitles, and an HTML copy page to paste from.
   Use when the user is preparing a video for YouTube upload and wants the
   metadata and subtitles generated. Takes one source: a local video file,
-  URL, or Cloudglue file id. Runs the built-in tinycloud "youtube-publish"
+  URL, or cloudglue:// file URI (e.g. cloudglue://files/<id>). Runs the built-in tinycloud "youtube-publish"
   workflow; requires the tinycloud CLI configured with a Cloudglue API key
   (analysis runs through the user's Cloudglue account).
-argument-hint: "[video file, URL, or Cloudglue file id]"
+argument-hint: "[video file, URL, or cloudglue:// file URI]"
 arguments: source
 ---
 
@@ -42,7 +42,7 @@ captions → render`). It generates SRT subtitles itself as part of the run.
    `tinycloud workflow plan youtube-publish $source --json` (free).
 
    ```bash
-   tinycloud workflow youtube-publish $source --allow-command --json
+   tinycloud workflow youtube-publish $source --json
    ```
 
    Useful params: `--param segment=chapters` (default; produces the chapter

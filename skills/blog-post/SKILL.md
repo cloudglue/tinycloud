@@ -4,11 +4,11 @@ description: >-
   Transform a video into a rich blog post (HTML + embedded markdown) with
   sections, thumbnails, and key takeaways. Use when the user wants to turn a
   video, talk, demo, or tutorial into a written article or blog content.
-  Takes one source: a local video file, URL, or Cloudglue file id. Runs the
+  Takes one source: a local video file, URL, or cloudglue:// file URI (e.g. cloudglue://files/<id>). Runs the
   built-in tinycloud "blog-post" workflow; requires the tinycloud CLI
   configured with a Cloudglue API key (analysis runs through the user's
   Cloudglue account).
-argument-hint: "[video file, URL, or Cloudglue file id]"
+argument-hint: "[video file, URL, or cloudglue:// file URI]"
 arguments: source
 ---
 
@@ -41,7 +41,7 @@ inside the tinycloud binary (`watch → extract → render`).
    `tinycloud workflow plan blog-post $source --json` (free).
 
    ```bash
-   tinycloud workflow blog-post $source --allow-command --json
+   tinycloud workflow blog-post $source --json
    ```
 
    Useful params: `--param segment=chapters` (default; semantic section
