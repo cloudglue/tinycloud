@@ -140,8 +140,8 @@ tinycloud workflow <name> <source> [--param k=v] [--segment <s>] [--out <dir>]
 ```bash
 tinycloud publish <html-file-or-dir> [--name <site-name>]
   [--visibility public|private] --json
-tinycloud publish list --json                  # sites for this account, with URLs
-tinycloud publish unpublish <site-id> --json   # take a site down (use data.sites[].site_id from list)
+tinycloud publish list --json                       # sites for this account, with URLs
+tinycloud publish unpublish <site-ref> --json       # site_id, site name, or the --name label
 ```
 
 `public` = anyone with the link; `private` = Cloudglue account members only
@@ -150,9 +150,10 @@ Republishing identical content makes no network calls; flipping visibility
 patches without re-uploading. `list`/`unpublish` are gated by the
 `publish.manage.v1` feature id.
 
-Gotchas (0.3.0): `--name` labels the *artifact* (for republish reuse) — the
-site itself gets a generated name (e.g. `young-fire-2486`); and `unpublish`
-accepts the `site_id` (UUID), not the site name `publish list` displays.
+Note: `--name` is a label for the artifact (republishing reuses it) — the
+site itself gets a generated name (e.g. `young-fire-2486`) shown by
+`publish list`. `unpublish` resolves any of: the `site_id` UUID, the
+generated site name, or your `--name` label.
 
 ### setup — credentials
 

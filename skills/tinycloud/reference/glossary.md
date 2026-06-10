@@ -69,4 +69,4 @@ connector?" or an envelope field needs explaining.
 - **Cloudglue Sites** — hosted pages for published artifacts:
   `tinycloud publish <html> --visibility public|private` returns a shareable
   URL (private = Cloudglue account members only, same URL). Manage with
-  `publish list` and `publish unpublish <site-id>`.
+  `publish list` and `publish unpublish <site-id | site-name | label>`.
