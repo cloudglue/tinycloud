@@ -231,9 +231,11 @@ elif [ "$HAVE_MANIFEST" -eq 1 ]; then
   # sidecar for integrity. Never sed nested platform fields — on a
   # multi-platform manifest that can return the wrong platform's checksum.
   if [ -n "$VERSION" ] && [ "${TINYCLOUD_REQUIRE_MANIFEST:-0}" = "1" ] \
-    && ! grep -q "\"${VERSION}\"" "$MANIFEST_FILE"; then
+    && ! grep -qF "\"${VERSION}\":" "$MANIFEST_FILE"; then
     # Strict-mode parity with the python3 branch: a pinned version absent
-    # from the manifest must not slip through via the sidecar path.
+    # from the manifest must not slip through via the sidecar path. -F plus
+    # the trailing colon anchors on the exact versions-object key, so a pin
+    # like "0.3" can't substring-match inside "0.3.0".
     echo "Error: Version ${VERSION} not found in the release manifest (strict mode)" >&2
     exit 1
   fi
