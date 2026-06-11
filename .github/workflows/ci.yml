@@ -1,0 +1,179 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # Live-CDN checks run on demand: Actions tab → CI → "Run workflow"
+  # (optionally with a version), or on any push to main.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "tinycloud version to smoke-test (empty = latest)"
+        required: false
+
+jobs:
+  unit:
+    name: Wrapper unit + e2e tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm test
+
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck install.sh scripts/smoke-test.sh skills/tinycloud/scripts/preflight.sh
+
+  plugin-metadata:
+    name: Plugin + skill metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: JSON metadata is valid
+        run: |
+          python3 - <<'EOF'
+          import json
+          for p in [".claude-plugin/marketplace.json", ".claude-plugin/plugin.json",
+                    "skills/tinycloud/tinycloud-skill.json"]:
+              json.load(open(p))
+              print("OK", p)
+          EOF
+      - name: Preflight requirements match tinycloud-skill.json
+        run: |
+          python3 - <<'EOF'
+          import json, re, sys
+          skill = json.load(open("skills/tinycloud/tinycloud-skill.json"))["tinycloud"]
+          script = open("skills/tinycloud/scripts/preflight.sh").read()
+          manifest = set(skill["required_features"])
+          preflight = set(re.search(r'REQUIRED_FEATURES="([^"]+)"', script).group(1).split())
+          if manifest != preflight:
+              print("Feature mismatch:", manifest.symmetric_difference(preflight))
+              sys.exit(1)
+          min_version = re.search(r'MIN_VERSION="([^"]+)"', script).group(1)
+          if min_version != skill["min_version"]:
+              print(f"min_version mismatch: preflight={min_version} manifest={skill['min_version']}")
+              sys.exit(1)
+          max_excl = re.search(r'MAX_VERSION_EXCLUSIVE="([^"]+)"', script).group(1)
+          range_max = re.search(r'<\s*([0-9][\w.+-]*)', skill["supported_range"]).group(1)
+          if max_excl != range_max:
+              print(f"supported_range upper bound mismatch: preflight={max_excl} manifest=<{range_max}")
+              sys.exit(1)
+          print(f"In sync: {len(manifest)} features, range >={min_version} <{max_excl}")
+          EOF
+      - name: Every skill has frontmatter description
+        run: |
+          for f in skills/*/SKILL.md; do
+            head -1 "$f" | grep -q '^---$' || { echo "FAIL: $f missing frontmatter"; exit 1; }
+            grep -q '^description:' "$f" || { echo "FAIL: $f missing description"; exit 1; }
+            echo "OK $f"
+          done
+
+  smoke:
+    name: Install + smoke (${{ matrix.os }}, ${{ matrix.version || 'latest' }})
+    runs-on: ${{ matrix.os }}
+    # Live-CDN checks don't gate PRs (a CDN gap would fail every PR); they run
+    # on pushes to main and manual dispatch instead.
+    if: github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+        version: ["", "0.3.0"]
+    env:
+      TINYCLOUD_INSTALL_DIR: ${{ github.workspace }}/tc/bin
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install via this repo's installer
+        run: |
+          if [ -n "${{ matrix.version || github.event.inputs.version }}" ]; then
+            bash install.sh --version "${{ matrix.version || github.event.inputs.version }}"
+          else
+            bash install.sh
+          fi
+      - name: Validate the deployed endpoint (latest only)
+        if: matrix.version == ''
+        # Resolution-only check — the binary itself was already downloaded and
+        # smoke-tested by the previous step; a second ~90MB install of the
+        # same tarball proves nothing extra.
+        run: |
+          curl -fsSL https://app.cloudglue.dev/tinycloud.sh -o "$RUNNER_TEMP/deployed.sh"
+          if URL=$(bash "$RUNNER_TEMP/deployed.sh" --print-url 2>/dev/null); then
+            curl -fsSIL "$URL" >/dev/null
+            echo "deployed endpoint resolves: $URL"
+          else
+            echo "::warning::deployed tinycloud.sh predates --print-url (redeploy pending); skipping endpoint validation"
+          fi
+      - name: Contract smoke tests
+        run: |
+          TINYCLOUD_CMD="$TINYCLOUD_INSTALL_DIR/tinycloud" \
+          EXPECTED_VERSION="${{ matrix.version }}" \
+          bash scripts/smoke-test.sh
+      - name: Skill preflight (no credentials → exit 13)
+        run: |
+          export PATH="$TINYCLOUD_INSTALL_DIR:$PATH"
+          set +e
+          out=$(bash skills/tinycloud/scripts/preflight.sh)
+          code=$?
+          set -e
+          echo "$out (exit $code)"
+          [ "$code" -eq 13 ] || { echo "expected exit 13 (missing credentials)"; exit 1; }
+          echo "$out" | grep -q "credentials missing"
+      - name: Skill preflight (missing binary → exit 10)
+        run: |
+          set +e
+          out=$(PATH=/usr/bin:/bin bash skills/tinycloud/scripts/preflight.sh)
+          code=$?
+          set -e
+          echo "$out (exit $code)"
+          [ "$code" -eq 10 ] || { echo "expected exit 10 (binary missing)"; exit 1; }
+      - name: Skill-creator scaffolder contract
+        run: |
+          export PATH="$TINYCLOUD_INSTALL_DIR:$PATH"
+          SCAFFOLDER="$TINYCLOUD_INSTALL_DIR/skills/skill-creator/scripts/init-skill.js"
+          test -f "$SCAFFOLDER" || { echo "scaffolder missing from distribution"; exit 1; }
+          node "$SCAFFOLDER" ci-test-skill --description "CI scaffold check" --dir "$RUNNER_TEMP/skills" --pattern workflow
+          tinycloud workflow validate "$RUNNER_TEMP/skills/ci-test-skill/ci-test-skill.yaml" --json \
+            | grep -q '"recipe":"ci-test-skill"'
+
+  wrapper-e2e-live:
+    name: npx wrapper against live CDN (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    # Live-CDN checks don't gate PRs — see the smoke job comment.
+    if: github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Pack the wrapper
+        run: npm pack
+      - name: First run downloads latest and execs
+        env:
+          TINYCLOUD_INSTALL_DIR: ${{ runner.temp }}/tc-root
+          TINYCLOUD_VERSION: latest
+        run: |
+          # </dev/null: pre-0.3.0 binaries open a TUI on this invocation
+          npx -y ./cloudglue-tinycloud-*.tgz --version --json </dev/null | grep -q '"protocol_version"'
+      - name: Second run hits the cache (no network)
+        env:
+          TINYCLOUD_INSTALL_DIR: ${{ runner.temp }}/tc-root
+          TINYCLOUD_VERSION: latest
+          TINYCLOUD_DIST_URL: http://127.0.0.1:1 # unreachable — must not be needed
+        run: |
+          # resolve the cached version dir and pin to it (latest would re-resolve)
+          v=$(ls "$TINYCLOUD_INSTALL_DIR/versions" | head -1)
+          TINYCLOUD_VERSION="$v" npx -y ./cloudglue-tinycloud-*.tgz --version --json </dev/null \
+            | grep -q '"protocol_version"'
