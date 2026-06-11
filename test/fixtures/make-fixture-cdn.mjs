@@ -41,6 +41,7 @@ const noManifest = has("--no-manifest");
 const manifestStatus = Number(arg("--manifest-status", "200")); // e.g. 500 for outage simulation
 const manifestGarbage = has("--manifest-garbage"); // 200 + HTML (captive portal)
 const manifestTruncated = has("--manifest-truncated"); // 200 + cut-off JSON (schema marker intact)
+const manifestNoSha = has("--manifest-no-sha"); // manifest entry without sha256
 const noSidecar = has("--no-sidecar"); // .sha256 routes 403
 const canonicalUrls = has("--canonical-urls"); // manifest URLs point at the real CDN host
 const manifestOnlyVersion = arg("--manifest-only-version"); // manifest lists this version instead
@@ -79,7 +80,7 @@ function manifestBody() {
             [platform]: {
               url: `${urlBase}/tinycloud-${platform}-v${v}.tar.gz`,
               size: original.length,
-              sha256,
+              ...(manifestNoSha ? {} : { sha256 }),
             },
           },
         },

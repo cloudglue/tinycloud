@@ -225,6 +225,27 @@ test("strict mode hard-fails on an unusable manifest", { timeout: 60_000 }, asyn
   assert.match(String(res.stderr), /TINYCLOUD_REQUIRE_MANIFEST/);
 });
 
+test("strict mode requires a checksum, not just a manifest", { timeout: 60_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-nosha-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+  const { child, url } = await startFixture(tarball, ["--manifest-no-sha", "--no-sidecar"]);
+  t.after(() => child.kill());
+
+  const env = {
+    TINYCLOUD_DIST_URL: url,
+    TINYCLOUD_INSTALL_DIR: path.join(work, "root"),
+    TINYCLOUD_VERSION: VERSION,
+  };
+  const strict = runLauncher(["--version"], { ...env, TINYCLOUD_REQUIRE_MANIFEST: "1" });
+  assert.notEqual(strict.code, 0);
+  assert.match(String(strict.stderr), /no checksum is available/);
+
+  // non-strict still installs (warn-and-proceed semantics)
+  const lax = runLauncher(["--version", "--json"], env);
+  assert.equal(lax.code, 0, lax.stderr);
+});
+
 test("TINYCLOUD_DIST_URL override rebases the manifest's canonical URLs", { timeout: 120_000 }, async (t) => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
   t.after(() => fs.rmSync(work, { recursive: true, force: true }));
