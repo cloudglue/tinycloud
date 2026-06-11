@@ -65,10 +65,21 @@ to your real shell rc file.
   is the resolution source of truth when present. "Latest" resolves through
   `channels.stable` to a pinned, checksummed URL; channel installs and
   `tinycloud update` are impossible without it.
-- **Integrity policy**: checksum *mismatch* always fails closed. *Missing*
-  manifest degrades gracefully (try `.sha256` sidecar, else warn and proceed)
-  unless `TINYCLOUD_REQUIRE_MANIFEST=1`. CloudFront returns **403 for missing
-  S3 keys** — treat 403 and 404 both as "missing".
+- **Integrity policy** (identical in both installers): the manifest is an
+  optimization, never a requirement — missing OR unusable (network failure,
+  5xx, captive-portal HTML, truncated JSON, future schema) degrades with a
+  warning to the direct-URL + `.sha256`-sidecar path. Checksum *mismatch*
+  always fails closed. `TINYCLOUD_REQUIRE_MANIFEST=1` means
+  **verified-or-fail** (unusable manifest or no checksum → hard error).
+  Pinned versions missing from the manifest fall back to the conventional
+  URL; a `latest` pin falls back to the newest healthy cached install when
+  offline. `TINYCLOUD_DIST_URL` rebases the manifest's absolute URLs.
+  CloudFront returns **403 for missing S3 keys** — treat 403 and 404 both
+  as "missing".
+- **Upgrade cleanup is manifest-of-members**: each install.sh run records
+  the tarball member list in `<install-dir>/.tinycloud-files` and the next
+  install removes exactly those paths (user files anywhere survive). The
+  name-allowlist scan is only a legacy fallback for pre-record installs.
 - `install.sh` (bash) and `lib/manifest.js` (node) implement the same
   resolution logic; changes to one must mirror the other.
 - The launcher chain: `bin/tinycloud.js` (dispatch; owns the
