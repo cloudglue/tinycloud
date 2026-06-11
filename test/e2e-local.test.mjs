@@ -7,7 +7,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -59,16 +59,12 @@ function startFixture(tarball, extraArgs = []) {
 }
 
 function runLauncher(args, env, opts = {}) {
-  try {
-    const stdout = execFileSync(process.execPath, [launcher, ...args], {
-      encoding: "utf8",
-      env: { ...process.env, ...env },
-      ...opts,
-    });
-    return { code: 0, stdout };
-  } catch (err) {
-    return { code: err.status ?? 1, stdout: err.stdout ?? "", stderr: err.stderr ?? "" };
-  }
+  const r = spawnSync(process.execPath, [launcher, ...args], {
+    encoding: "utf8",
+    env: { ...process.env, ...env },
+    ...opts,
+  });
+  return { code: r.status ?? 1, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
 }
 
 test("launcher downloads, verifies, caches, and execs", { timeout: 120_000 }, async (t) => {
@@ -193,6 +189,99 @@ test("install rejects --version with --latest", { timeout: 30_000 }, (t) => {
   assert.match(String(res.stderr), /--version and --latest cannot be used together/);
 });
 
+test("manifest 5xx and garbage-200 degrade instead of failing the install", { timeout: 120_000 }, async (t) => {
+  for (const mode of [["--manifest-status", "500"], ["--manifest-garbage"]]) {
+    const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
+    t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+    const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+    const { child, url } = await startFixture(tarball, mode);
+    t.after(() => child.kill());
+
+    const res = runLauncher(["--version", "--json"], {
+      TINYCLOUD_DIST_URL: url,
+      TINYCLOUD_INSTALL_DIR: path.join(work, "root"),
+      TINYCLOUD_VERSION: VERSION,
+    });
+    assert.equal(res.code, 0, `${mode.join(" ")}: ${res.stderr}`);
+    assert.match(res.stdout, /"version":\s*"0\.3\.0"/, mode.join(" "));
+    child.kill();
+  }
+});
+
+test("strict mode hard-fails on an unusable manifest", { timeout: 60_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+  const { child, url } = await startFixture(tarball, ["--manifest-garbage"]);
+  t.after(() => child.kill());
+
+  const res = runLauncher(["--version"], {
+    TINYCLOUD_DIST_URL: url,
+    TINYCLOUD_INSTALL_DIR: path.join(work, "root"),
+    TINYCLOUD_VERSION: VERSION,
+    TINYCLOUD_REQUIRE_MANIFEST: "1",
+  });
+  assert.notEqual(res.code, 0);
+  assert.match(String(res.stderr), /TINYCLOUD_REQUIRE_MANIFEST/);
+});
+
+test("TINYCLOUD_DIST_URL override rebases the manifest's canonical URLs", { timeout: 120_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+  // manifest URLs point at media.cloudglue.dev; the download must still come
+  // from the fixture because TINYCLOUD_DIST_URL overrides the base
+  const { child, url } = await startFixture(tarball, ["--canonical-urls"]);
+  t.after(() => child.kill());
+
+  const res = runLauncher(["--version", "--json"], {
+    TINYCLOUD_DIST_URL: url,
+    TINYCLOUD_INSTALL_DIR: path.join(work, "root"),
+    TINYCLOUD_VERSION: VERSION,
+  });
+  assert.equal(res.code, 0, res.stderr);
+  const ok = JSON.parse(fs.readFileSync(path.join(work, "root", "versions", VERSION, ".ok"), "utf8"));
+  assert.ok(ok.url.startsWith(url), `download came from the override (${ok.url})`);
+  assert.equal(ok.verified, true, "manifest checksum still applied");
+});
+
+test("pinned version missing from the manifest falls back to the direct URL", { timeout: 120_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+  // manifest only lists 9.9.9; the pinned 0.3.0 tarball + sidecar still exist
+  const { child, url } = await startFixture(tarball, ["--manifest-only-version", "9.9.9"]);
+  t.after(() => child.kill());
+
+  const res = runLauncher(["--version", "--json"], {
+    TINYCLOUD_DIST_URL: url,
+    TINYCLOUD_INSTALL_DIR: path.join(work, "root"),
+    TINYCLOUD_VERSION: VERSION,
+  });
+  assert.equal(res.code, 0, res.stderr);
+  assert.match(String(res.stderr), /not in the release manifest; trying the direct URL/);
+  assert.match(res.stdout, /"version":\s*"0\.3\.0"/);
+});
+
+test("latest pin falls back to the newest cached install when offline", { timeout: 120_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+  const { child, url } = await startFixture(tarball);
+  t.after(() => child.kill());
+
+  const installRoot = path.join(work, "root");
+  const env = { TINYCLOUD_DIST_URL: url, TINYCLOUD_INSTALL_DIR: installRoot, TINYCLOUD_VERSION: "latest" };
+  const first = runLauncher(["--version", "--json"], env);
+  assert.equal(first.code, 0, first.stderr);
+
+  child.kill(); // CDN goes away
+  const offline = runLauncher(["--version", "--json"], { ...env, TINYCLOUD_DIST_URL: "http://127.0.0.1:1" });
+  assert.equal(offline.code, 0, offline.stderr);
+  assert.match(String(offline.stderr), /using cached/);
+  assert.match(offline.stdout, /"version":\s*"0\.3\.0"/);
+});
+
 test("missing manifest degrades to sidecar verification", { timeout: 120_000 }, async (t) => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
   t.after(() => fs.rmSync(work, { recursive: true, force: true }));
@@ -252,17 +341,27 @@ test("install.sh upgrade removes ghost files from prior versions", { timeout: 12
   const installDir = path.join(work, "bin");
   const env = { ...process.env, HOME: path.join(work, "home"), SHELL: "/bin/sh", TINYCLOUD_DIST_URL: url };
 
-  // first install, then plant a ghost (a skill dir the "old version" shipped)
+  // first install, then plant a ghost the "old version" shipped — recorded
+  // in .tinycloud-files like any real member of the previous tarball
   execFileSync("bash", [installScript, "--install-dir", installDir, "--version", VERSION], { encoding: "utf8", env });
   const ghost = path.join(installDir, "skills", "removed-in-new-version");
   fs.mkdirSync(ghost, { recursive: true });
   fs.writeFileSync(path.join(ghost, "SKILL.md"), "ghost\n");
+  fs.appendFileSync(
+    path.join(installDir, ".tinycloud-files"),
+    "./skills/removed-in-new-version/\n./skills/removed-in-new-version/SKILL.md\n"
+  );
+  // a user's own file in skills/ is NOT recorded and must survive
+  const userSkill = path.join(installDir, "skills", "my-custom", "SKILL.md");
+  fs.mkdirSync(path.dirname(userSkill), { recursive: true });
+  fs.writeFileSync(userSkill, "mine\n");
 
   const out = execFileSync("bash", [installScript, "--install-dir", installDir, "--version", VERSION], {
     encoding: "utf8",
     env,
   });
-  assert.ok(!fs.existsSync(ghost), "stale skill dir removed on upgrade");
+  assert.ok(!fs.existsSync(ghost), "stale recorded skill dir removed on upgrade");
+  assert.equal(fs.readFileSync(userSkill, "utf8"), "mine\n", "unrecorded user skill survives");
   assert.ok(!out.includes("not part of a tinycloud"), "no mixed-dir warning on a normal upgrade");
 });
 

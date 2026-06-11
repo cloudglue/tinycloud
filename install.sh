@@ -121,21 +121,24 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 MANIFEST_FILE="${TMP_DIR}/manifest.json"
 HAVE_MANIFEST=0
-# Distinguish "missing" (CloudFront serves 403 for absent keys; 404; network
-# failure) from genuine server errors, matching the npm launcher's behavior:
-# missing degrades, anything else fails loudly.
-HTTP_CODE="$(curl -sSL -o "$MANIFEST_FILE" -w '%{http_code}' "${BASE_URL}/manifest.json" 2>/dev/null || echo 000)"
+# The manifest is an optimization, never a requirement (unless strict mode):
+# installs that don't need it must survive manifest-endpoint problems. Any
+# non-200 (CloudFront 403-for-missing, 404, 5xx, network failure) degrades to
+# the direct-URL + sidecar path; checksum MISMATCHES still always fail.
+# (`|| true` guards set -e; curl -w prints 000 itself on network failure.)
+HTTP_CODE="$(curl -sSL -o "$MANIFEST_FILE" -w '%{http_code}' "${BASE_URL}/manifest.json" 2>/dev/null || true)"
+HTTP_CODE="${HTTP_CODE:-000}"
 case "$HTTP_CODE" in
   200) HAVE_MANIFEST=1 ;;
   000|403|404) HAVE_MANIFEST=0 ;;
   *)
-    echo "Error: fetching ${BASE_URL}/manifest.json failed: HTTP ${HTTP_CODE}" >&2
-    exit 1
+    echo "Warning: fetching ${BASE_URL}/manifest.json failed (HTTP ${HTTP_CODE}); proceeding without it" >&2
+    HAVE_MANIFEST=0
     ;;
 esac
 
 if [ "$HAVE_MANIFEST" -eq 0 ] && [ "${TINYCLOUD_REQUIRE_MANIFEST:-0}" = "1" ]; then
-  echo "Error: TINYCLOUD_REQUIRE_MANIFEST=1 but ${BASE_URL}/manifest.json is missing (HTTP ${HTTP_CODE})" >&2
+  echo "Error: TINYCLOUD_REQUIRE_MANIFEST=1 but ${BASE_URL}/manifest.json is unavailable (HTTP ${HTTP_CODE})" >&2
   exit 1
 fi
 
@@ -156,6 +159,8 @@ for key in sys.argv[2:]:
     if not isinstance(obj, dict) or key not in obj:
         sys.exit(1)
     obj = obj[key]
+if obj is None:
+    sys.exit(1)  # null behaves like a missing key, never the string "None"
 print(obj if not isinstance(obj, (dict, list)) else json.dumps(obj))
 PYEOF
 }
@@ -168,19 +173,27 @@ channel_version() {
 }
 
 if [ "$HAVE_MANIFEST" -eq 1 ]; then
-  # Reject manifests from a future schema, like the npm launcher does.
+  # An unusable body (captive-portal HTML, future schema) degrades like a
+  # missing manifest — the sidecar path still verifies checksums, and
+  # checksum mismatches always fail. Strict mode keeps it a hard error.
   SCHEMA="$(grep -o '"schema"[[:space:]]*:[[:space:]]*[0-9][0-9]*' "$MANIFEST_FILE" | grep -o '[0-9][0-9]*$' | head -1)"
   if [ "${SCHEMA:-}" != "1" ]; then
-    echo "Error: unsupported manifest schema '${SCHEMA:-?}' at ${BASE_URL}/manifest.json — update this installer" >&2
-    exit 1
+    echo "Warning: ${BASE_URL}/manifest.json is not a usable release manifest (schema '${SCHEMA:-?}'); proceeding without it" >&2
+    HAVE_MANIFEST=0
+    if [ "${TINYCLOUD_REQUIRE_MANIFEST:-0}" = "1" ]; then
+      echo "Error: TINYCLOUD_REQUIRE_MANIFEST=1 but the manifest is unusable" >&2
+      exit 1
+    fi
   fi
 fi
 
 EXPECTED_SHA256=""
 if [ "$HAVE_MANIFEST" -eq 1 ] && [ "$HAVE_PY3" -eq 1 ]; then
+  USER_PINNED=0
+  [ -n "$VERSION" ] && USER_PINNED=1
   if [ -z "$VERSION" ]; then
     VERSION="$(json_get "$MANIFEST_FILE" channels "$CHANNEL" || true)"
-    if [ -z "$VERSION" ] || [ "$VERSION" = "None" ] || [ "$VERSION" = "null" ]; then
+    if [ -z "$VERSION" ]; then
       echo "Error: Channel '${CHANNEL}' has no released version in the manifest" >&2
       exit 1
     fi
@@ -189,7 +202,20 @@ if [ "$HAVE_MANIFEST" -eq 1 ] && [ "$HAVE_PY3" -eq 1 ]; then
   fi
   URL="$(json_get "$MANIFEST_FILE" versions "$VERSION" platforms "$PLATFORM" url || true)"
   EXPECTED_SHA256="$(json_get "$MANIFEST_FILE" versions "$VERSION" platforms "$PLATFORM" sha256 || true)"
-  if [ -z "$URL" ]; then
+  if [ -n "$URL" ] && [ -n "${TINYCLOUD_DIST_URL:-}" ]; then
+    # An explicit distribution base (mirror, fixture) wins over the
+    # manifest's absolute URLs — otherwise the override only redirects the
+    # manifest fetch while tarballs still download from the canonical CDN.
+    URL="${BASE_URL}/$(basename "$URL")"
+  fi
+  if [ -z "$URL" ] && [ "$USER_PINNED" -eq 1 ] && [ "${TINYCLOUD_REQUIRE_MANIFEST:-0}" != "1" ]; then
+    # A user-pinned version missing from the manifest (e.g. a pre-manifest
+    # release whose tarball is still on the CDN) falls back to the
+    # conventional URL + sidecar instead of hard-failing.
+    echo "Warning: version ${VERSION} is not in the release manifest; trying the direct URL" >&2
+    URL="${BASE_URL}/tinycloud-${PLATFORM}-v${VERSION}.tar.gz"
+    EXPECTED_SHA256="$(curl -fsSL "${URL}.sha256" 2>/dev/null | grep -oE '^[0-9a-fA-F]{64}' | head -1 || true)"
+  elif [ -z "$URL" ]; then
     echo "Error: Version ${VERSION} for ${PLATFORM} not found in the release manifest" >&2
     exit 1
   fi
@@ -261,6 +287,11 @@ if [ -n "$EXPECTED_SHA256" ]; then
     exit 1
   fi
   echo "Checksum verified."
+elif [ "${TINYCLOUD_REQUIRE_MANIFEST:-0}" = "1" ]; then
+  # Strict mode means verified-or-fail — not just manifest-present. This
+  # covers e.g. the no-python3 path when the .sha256 sidecar is missing.
+  echo "Error: TINYCLOUD_REQUIRE_MANIFEST=1 but no checksum is available for ${TARBALL}" >&2
+  exit 1
 else
   echo "Warning: no checksum available for ${TARBALL}; proceeding without verification." >&2
 fi
@@ -270,53 +301,73 @@ echo "Extracting to ${INSTALL_DIR}..."
 mkdir -p "$INSTALL_DIR"
 
 # Remove stale distribution assets so upgrades never leave ghost files behind
-# (e.g. a skill directory the new version dropped). Three safety rules:
-#   1. Cleanup runs only in a clearly dedicated tinycloud dir: every entry
-#      must be a distribution name AND the `tinycloud` binary file must be
-#      present as positive proof of a prior install (an empty dir is fine
-#      too — nothing to clean). A shared prefix like /usr/local has foreign
-#      entries and is skipped with a warning.
-#   2. Distribution-conceptual dirs (skills/, workflows/, licenses/) are
-#      replaced wholesale — the extract fully regenerates them.
-#   3. Inside bin/ only the distribution's known tool names are removed,
-#      never the directory — a user may have dropped their own files there.
-# (${INSTALL_DIR:?} guards against expanding to /bin etc. if it were empty)
-DEDICATED=1
-HAS_ENTRIES=0
-for entry in "${INSTALL_DIR:?}"/* "${INSTALL_DIR:?}"/.*; do
-  name="$(basename "$entry")"
-  [ -e "$entry" ] || continue
-  case "$name" in
-    # Hidden housekeeping files (.DS_Store etc.) are neutral: they neither
-    # prove nor disprove ownership, and cleanup never touches them.
-    .*) ;;
-    tinycloud|LICENSE.md|THIRD_PARTY_NOTICES.md)
-      HAS_ENTRIES=1
-      [ -d "$entry" ] && { DEDICATED=0; break; }
-      ;;
-    bin|skills|workflows|licenses)
-      HAS_ENTRIES=1
-      [ -d "$entry" ] || { DEDICATED=0; break; }
-      ;;
-    *) DEDICATED=0; break ;;
-  esac
-done
-if [ "$HAS_ENTRIES" -eq 1 ] && [ ! -f "${INSTALL_DIR}/tinycloud" ]; then
-  # Entries look distribution-shaped but there's no binary proving a prior
-  # tinycloud install — don't touch anything.
-  DEDICATED=0
-fi
-if [ "$DEDICATED" -eq 1 ]; then
-  rm -f "${INSTALL_DIR:?}/tinycloud" "${INSTALL_DIR:?}/LICENSE.md" \
-        "${INSTALL_DIR:?}/THIRD_PARTY_NOTICES.md"
-  rm -rf "${INSTALL_DIR:?}/skills" "${INSTALL_DIR:?}/workflows" "${INSTALL_DIR:?}/licenses"
-  rm -f "${INSTALL_DIR:?}/bin/bun" "${INSTALL_DIR:?}/bin/ffmpeg" "${INSTALL_DIR:?}/bin/ffprobe"
-elif [ "$HAS_ENTRIES" -eq 1 ]; then
-  echo "Warning: ${INSTALL_DIR} contains files that are not part of a tinycloud" >&2
-  echo "install; skipping stale-asset cleanup (files from older tinycloud" >&2
-  echo "versions may remain). A dedicated directory is recommended." >&2
+# (e.g. a skill directory the new version dropped).
+#
+# Preferred mechanism — manifest of members: each install records the exact
+# tarball member list in .tinycloud-files; the next install deletes exactly
+# those paths (then prunes the emptied recorded dirs). Self-describing, no
+# name allowlist to drift when future releases add new entries, and user
+# files anywhere (even inside skills/ or bin/) are never touched.
+RECORD_FILE="${INSTALL_DIR:?}/.tinycloud-files"
+if [ -f "$RECORD_FILE" ]; then
+  while IFS= read -r rel; do
+    rel="${rel#./}"; rel="${rel%/}"
+    [ -n "$rel" ] || continue
+    case "$rel" in *..*) continue ;; esac # defensive: never traverse upward
+    p="${INSTALL_DIR:?}/${rel}"
+    if [ -f "$p" ] || [ -L "$p" ]; then rm -f "$p"; fi
+  done < "$RECORD_FILE"
+  # prune recorded directories deepest-first, only when emptied
+  sort -r "$RECORD_FILE" | while IFS= read -r rel; do
+    rel="${rel#./}"; rel="${rel%/}"
+    [ -n "$rel" ] || continue
+    case "$rel" in *..*) continue ;; esac
+    # rmdir only when emptied; non-empty (user files remain) is fine
+    rmdir "${INSTALL_DIR:?}/${rel}" 2>/dev/null || true
+  done
+  rm -f "$RECORD_FILE"
+else
+  # Legacy fallback (first upgrade over a pre-record install): name-based
+  # cleanup, only in a clearly dedicated tinycloud dir — every entry must be
+  # a distribution name AND the tinycloud binary must prove a prior install.
+  # Dotfiles and npm-launcher artifacts (versions/, tmp/, wrapper-version —
+  # present when TINYCLOUD_INSTALL_DIR points both tools at one dir) are
+  # neutral: they don't block cleanup and are never touched.
+  DEDICATED=1
+  HAS_ENTRIES=0
+  for entry in "${INSTALL_DIR:?}"/* "${INSTALL_DIR:?}"/.*; do
+    name="$(basename "$entry")"
+    [ -e "$entry" ] || continue
+    case "$name" in
+      .*|versions|tmp|wrapper-version) ;;
+      tinycloud|LICENSE.md|THIRD_PARTY_NOTICES.md)
+        HAS_ENTRIES=1
+        [ -d "$entry" ] && { DEDICATED=0; break; }
+        ;;
+      bin|skills|workflows|licenses)
+        HAS_ENTRIES=1
+        [ -d "$entry" ] || { DEDICATED=0; break; }
+        ;;
+      *) DEDICATED=0; break ;;
+    esac
+  done
+  if [ "$HAS_ENTRIES" -eq 1 ] && [ ! -f "${INSTALL_DIR}/tinycloud" ]; then
+    DEDICATED=0
+  fi
+  if [ "$DEDICATED" -eq 1 ]; then
+    rm -f "${INSTALL_DIR:?}/tinycloud" "${INSTALL_DIR:?}/LICENSE.md" \
+          "${INSTALL_DIR:?}/THIRD_PARTY_NOTICES.md"
+    rm -rf "${INSTALL_DIR:?}/skills" "${INSTALL_DIR:?}/workflows" "${INSTALL_DIR:?}/licenses"
+    rm -f "${INSTALL_DIR:?}/bin/bun" "${INSTALL_DIR:?}/bin/ffmpeg" "${INSTALL_DIR:?}/bin/ffprobe"
+  elif [ "$HAS_ENTRIES" -eq 1 ]; then
+    echo "Warning: ${INSTALL_DIR} contains files that are not part of a tinycloud" >&2
+    echo "install; skipping stale-asset cleanup (files from older tinycloud" >&2
+    echo "versions may remain). A dedicated directory is recommended." >&2
+  fi
 fi
 tar -xzf "${TMP_DIR}/${TARBALL}" -C "$INSTALL_DIR"
+# Record this install's members for the next upgrade's exact cleanup
+tar -tzf "${TMP_DIR}/${TARBALL}" > "$RECORD_FILE" 2>/dev/null || true
 
 if [ -x "${INSTALL_DIR}/tinycloud" ]; then
   echo ""

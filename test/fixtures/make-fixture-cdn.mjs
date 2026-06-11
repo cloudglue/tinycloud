@@ -38,6 +38,11 @@ const platform = arg(
 const port = Number(arg("--port", "0"));
 const corrupt = has("--corrupt");
 const noManifest = has("--no-manifest");
+const manifestStatus = Number(arg("--manifest-status", "200")); // e.g. 500 for outage simulation
+const manifestGarbage = has("--manifest-garbage"); // 200 + HTML (captive portal)
+const noSidecar = has("--no-sidecar"); // .sha256 routes 403
+const canonicalUrls = has("--canonical-urls"); // manifest URLs point at the real CDN host
+const manifestOnlyVersion = arg("--manifest-only-version"); // manifest lists this version instead
 
 if (!tarballPath || !fs.existsSync(tarballPath)) {
   console.error(`make-fixture-cdn: --tarball <path> is required (got: ${tarballPath})`);
@@ -56,20 +61,22 @@ if (corrupt) {
 const baseUrl = () => `http://127.0.0.1:${server.address().port}`;
 
 function manifestBody() {
+  const v = manifestOnlyVersion || version;
+  const urlBase = canonicalUrls ? "https://media.cloudglue.dev/tinycloud-dist" : baseUrl();
   return JSON.stringify(
     {
       schema: 1,
       name: "tinycloud",
       generated_at: "2026-01-01T00:00:00Z",
-      channels: { stable: version, beta: null },
+      channels: { stable: v, beta: null },
       versions: {
-        [version]: {
+        [v]: {
           released_at: "2026-01-01T00:00:00Z",
           channel: "stable",
           protocol_version: "1",
           platforms: {
             [platform]: {
-              url: `${baseUrl()}/tinycloud-${platform}-v${version}.tar.gz`,
+              url: `${urlBase}/tinycloud-${platform}-v${v}.tar.gz`,
               size: original.length,
               sha256,
             },
@@ -92,9 +99,15 @@ const server = http.createServer((req, res) => {
   if (url === "/manifest.json") {
     if (noManifest) {
       res.writeHead(403).end("Forbidden"); // mimic CloudFront missing-key behavior
+    } else if (manifestStatus !== 200) {
+      res.writeHead(manifestStatus).end("Server Error");
+    } else if (manifestGarbage) {
+      res.writeHead(200, { "content-type": "text/html" }).end(head ? undefined : "<html>captive portal</html>");
     } else {
       res.writeHead(200, { "content-type": "application/json" }).end(head ? undefined : manifestBody());
     }
+  } else if (url.endsWith(".tar.gz.sha256") && noSidecar) {
+    res.writeHead(403).end("Forbidden");
   } else if (tarballRoutes.has(url)) {
     res.writeHead(200, {
       "content-type": "application/x-gzip",

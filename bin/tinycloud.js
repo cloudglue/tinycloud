@@ -76,13 +76,14 @@ async function cmdInstall(args, target) {
   // An explicit --version wins without consulting the env/override, so a
   // malformed TINYCLOUD_VERSION can't block an explicit install.
   if (!version && !latest) version = pickVersion();
+  let manifest;
   if (latest) {
-    const manifest = await fetchManifest();
+    manifest = await fetchManifest();
     if (!manifest) throw new Error("`install --latest` requires the release manifest, which is not available");
     version = manifest.channels && manifest.channels.stable;
     if (!version) throw new Error("The release manifest has no stable version");
   }
-  const res = await ensureInstalled(version, target);
+  const res = await ensureInstalled(version, target, { manifest });
   if (latest) writeOverrideVersion(res.version);
   console.log(`tinycloud ${res.version} installed at ${res.dir}`);
 }
@@ -93,7 +94,7 @@ async function cmdUpdate(target) {
   const version = normalizeVersion(manifest.channels && manifest.channels.stable);
   if (!version) throw new Error("The release manifest has no stable version");
   const alreadyCurrent = isInstalled(version, target);
-  const res = await ensureInstalled(version, target);
+  const res = await ensureInstalled(version, target, { manifest });
   writeOverrideVersion(res.version);
   // Protect both the new stable and whatever the run path still resolves to
   // (e.g. a TINYCLOUD_VERSION env pin). Advisory only — a malformed env
