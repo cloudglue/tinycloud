@@ -98,6 +98,9 @@ tinycloud jobs wait <job-id> --timeout 120s --json
 # Publish an HTML artifact to Cloudglue Sites (manage with list / unpublish)
 tinycloud publish ./tinycloud-output/html/report.html --name report --visibility private --json
 tinycloud publish list --json
+
+# Share a video itself (hosted share page + HLS stream, like a Loom link)
+tinycloud publish video ./demo.mp4 --visibility public --json
 ```
 
 Per-verb details and all flags: [reference/verbs.md](reference/verbs.md).
@@ -131,8 +134,9 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   [command]`) — don't add `--allow-command` for them (host-agent permission
   classifiers may flag it); it's only needed for path-run recipes without
   that permission.
-- Sources: local paths, URLs, `cloudglue://files/<id>` URIs, or
-  `collection:col_…` — a bare file-id UUID is not accepted.
+- Sources: local paths, URLs, `cloudglue://files/<id>` URIs,
+  `collection:col_…`, or a bare Cloudglue file-id UUID (normalized to
+  `cloudglue://files/<id>`; an existing local path of the same name wins).
 - Do not pass `--background` to `ask`; background jobs exist only for tracked
   async ops (`watch`, `extract`).
 - `workflow status` / `workflow resume` are not implemented in 0.3.x; treat
@@ -146,6 +150,14 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   `--out` flag where supported).
 - Cached results are reused automatically; `--refresh` forces re-computation,
   `--no-cache` disables persistence.
+- After `publish`, share `data.url` (the stable site link). Fresh content can
+  take up to a minute to appear there — a brief 403 right after publishing is
+  propagation, not a failure; `data.version_url` serves that exact version
+  immediately.
+- Never pair a private video share with a public site: private stream URLs
+  are signed and short-lived (never hard-code them) — embed via
+  `data.embed_snippet` (`<cg-video>`), which only plays on a private site of
+  the same account.
 
 ## 5. Reference (load on demand)
 

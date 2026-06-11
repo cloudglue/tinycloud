@@ -57,7 +57,9 @@ Parse the single JSON envelope from stdout (machine output; logs are stderr):
   Default: `./tinycloud-output/runs/<data.run_id>/meeting-breakdown.html`.
 - Report the HTML path; offer
   `tinycloud publish <html> --name meeting-breakdown --visibility private --json`
-  to host it as a shareable page.
+  to host it as a shareable page. Share the returned `data.url` (fresh
+  content can take ~1 min to appear there; `data.version_url` is live
+  immediately, so a brief 403 at `data.url` is not a failure).
 
 Any other `status` (`needs_credentials`, `needs_upload`, `pending`, `paused`,
 `error`) or `data.status` of `partial`/`failed`: stop, report the envelope's

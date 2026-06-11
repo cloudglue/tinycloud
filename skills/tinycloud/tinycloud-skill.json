@@ -1,8 +1,8 @@
 {
-  "skill_version": "0.1.0",
+  "skill_version": "0.2.0",
   "tinycloud": {
-    "min_version": "0.3.0",
-    "supported_range": ">=0.3.0 <0.4.0",
+    "min_version": "0.3.1",
+    "supported_range": ">=0.3.1 <0.4.0",
     "required_features": [
       "envelope.v1",
       "watch.v1",
@@ -18,6 +18,7 @@
       "workflow.v1",
       "publish.v1",
       "publish.manage.v1",
+      "publish.video.v1",
       "setup.v1"
     ],
     "envelope_schema": "1",
