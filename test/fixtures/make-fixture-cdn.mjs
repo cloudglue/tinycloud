@@ -40,6 +40,7 @@ const corrupt = has("--corrupt");
 const noManifest = has("--no-manifest");
 const manifestStatus = Number(arg("--manifest-status", "200")); // e.g. 500 for outage simulation
 const manifestGarbage = has("--manifest-garbage"); // 200 + HTML (captive portal)
+const manifestTruncated = has("--manifest-truncated"); // 200 + cut-off JSON (schema marker intact)
 const noSidecar = has("--no-sidecar"); // .sha256 routes 403
 const canonicalUrls = has("--canonical-urls"); // manifest URLs point at the real CDN host
 const manifestOnlyVersion = arg("--manifest-only-version"); // manifest lists this version instead
@@ -103,6 +104,9 @@ const server = http.createServer((req, res) => {
       res.writeHead(manifestStatus).end("Server Error");
     } else if (manifestGarbage) {
       res.writeHead(200, { "content-type": "text/html" }).end(head ? undefined : "<html>captive portal</html>");
+    } else if (manifestTruncated) {
+      const cut = manifestBody().slice(0, 60); // keeps "schema": 1, breaks the JSON
+      res.writeHead(200, { "content-type": "application/json" }).end(head ? undefined : cut);
     } else {
       res.writeHead(200, { "content-type": "application/json" }).end(head ? undefined : manifestBody());
     }

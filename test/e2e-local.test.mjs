@@ -365,6 +365,22 @@ test("install.sh upgrade removes ghost files from prior versions", { timeout: 12
   assert.ok(!out.includes("not part of a tinycloud"), "no mixed-dir warning on a normal upgrade");
 });
 
+test("install.sh degrades on a truncated manifest instead of failing the install", { timeout: 120_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-trunc-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+  const { child, url } = await startFixture(tarball, ["--manifest-truncated"]);
+  t.after(() => child.kill());
+
+  const installDir = path.join(work, "bin");
+  const out = execFileSync("bash", [installScript, "--install-dir", installDir], {
+    encoding: "utf8",
+    env: { ...process.env, HOME: path.join(work, "home"), SHELL: "/bin/sh", TINYCLOUD_DIST_URL: url },
+  });
+  assert.ok(fs.existsSync(path.join(installDir, "tinycloud")), "unpinned install succeeded via the alias path");
+  assert.match(out + "", /installed successfully/);
+});
+
 test("legacy (pre-record) upgrade keeps user skills, removes bundled-name ghosts", { timeout: 120_000 }, async (t) => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-legacy-"));
   t.after(() => fs.rmSync(work, { recursive: true, force: true }));

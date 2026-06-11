@@ -173,17 +173,22 @@ channel_version() {
 }
 
 if [ "$HAVE_MANIFEST" -eq 1 ]; then
-  # An unusable body (captive-portal HTML, future schema) degrades like a
-  # missing manifest — the sidecar path still verifies checksums, and
-  # checksum mismatches always fail. Strict mode keeps it a hard error.
+  # An unusable body (captive-portal HTML, truncated JSON, future schema)
+  # degrades like a missing manifest — the sidecar path still verifies
+  # checksums, and checksum mismatches always fail. Strict mode keeps it a
+  # hard error.
   SCHEMA="$(grep -o '"schema"[[:space:]]*:[[:space:]]*[0-9][0-9]*' "$MANIFEST_FILE" | grep -o '[0-9][0-9]*$' | head -1)"
   if [ "${SCHEMA:-}" != "1" ]; then
     echo "Warning: ${BASE_URL}/manifest.json is not a usable release manifest (schema '${SCHEMA:-?}'); proceeding without it" >&2
     HAVE_MANIFEST=0
-    if [ "${TINYCLOUD_REQUIRE_MANIFEST:-0}" = "1" ]; then
-      echo "Error: TINYCLOUD_REQUIRE_MANIFEST=1 but the manifest is unusable" >&2
-      exit 1
-    fi
+  elif command -v python3 >/dev/null 2>&1 && ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$MANIFEST_FILE" 2>/dev/null; then
+    # A schema marker can survive truncation; reject bodies that don't parse
+    echo "Warning: ${BASE_URL}/manifest.json is not valid JSON; proceeding without it" >&2
+    HAVE_MANIFEST=0
+  fi
+  if [ "$HAVE_MANIFEST" -eq 0 ] && [ "${TINYCLOUD_REQUIRE_MANIFEST:-0}" = "1" ]; then
+    echo "Error: TINYCLOUD_REQUIRE_MANIFEST=1 but the manifest is unusable" >&2
+    exit 1
   fi
 fi
 
@@ -373,8 +378,15 @@ else
   fi
 fi
 tar -xzf "${TMP_DIR}/${TARBALL}" -C "$INSTALL_DIR"
-# Record this install's members for the next upgrade's exact cleanup
-tar -tzf "${TMP_DIR}/${TARBALL}" > "$RECORD_FILE" 2>/dev/null || true
+# Record this install's members for the next upgrade's exact cleanup. Write
+# atomically: a failed listing must not leave an empty record behind (an
+# empty record would make every future cleanup a no-op and block the legacy
+# fallback too).
+if tar -tzf "${TMP_DIR}/${TARBALL}" > "${RECORD_FILE}.tmp" 2>/dev/null && [ -s "${RECORD_FILE}.tmp" ]; then
+  mv "${RECORD_FILE}.tmp" "$RECORD_FILE"
+else
+  rm -f "${RECORD_FILE}.tmp" "$RECORD_FILE"
+fi
 
 if [ -x "${INSTALL_DIR}/tinycloud" ]; then
   echo ""
