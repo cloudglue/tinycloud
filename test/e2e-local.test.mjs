@@ -84,7 +84,7 @@ test("launcher downloads, verifies, caches, and execs", { timeout: 120_000 }, as
   // First run: downloads via manifest (checksummed) and execs the binary.
   const first = runLauncher(["--version", "--json"], env);
   assert.equal(first.code, 0, first.stderr);
-  assert.match(first.stdout, /"version":\s*"0\.3\.0"/);
+  assert.match(first.stdout, /"version":\s*"\d+\.\d+\.\d+"/);
   const okMarker = path.join(installRoot, "versions", VERSION, ".ok");
   assert.ok(fs.existsSync(okMarker), ".ok marker written");
   assert.match(fs.readFileSync(okMarker, "utf8"), /"verified":true/);
@@ -93,7 +93,7 @@ test("launcher downloads, verifies, caches, and execs", { timeout: 120_000 }, as
   child.kill();
   const second = runLauncher(["--version", "--json"], env);
   assert.equal(second.code, 0, second.stderr);
-  assert.match(second.stdout, /"version":\s*"0\.3\.0"/);
+  assert.match(second.stdout, /"version":\s*"\d+\.\d+\.\d+"/);
 });
 
 test("launcher rejects a cached version installed for another platform", { timeout: 120_000 }, async (t) => {
@@ -126,7 +126,7 @@ test("launcher rejects a cached version installed for another platform", { timeo
     TINYCLOUD_VERSION: VERSION,
   });
   assert.equal(res.code, 0, res.stderr);
-  assert.match(res.stdout, /"version":\s*"0\.3\.0"/);
+  assert.match(res.stdout, /"version":\s*"\d+\.\d+\.\d+"/);
   assert.equal(JSON.parse(fs.readFileSync(path.join(cached, ".ok"), "utf8")).target, TARGET);
 });
 
@@ -203,7 +203,7 @@ test("manifest 5xx and garbage-200 degrade instead of failing the install", { ti
       TINYCLOUD_VERSION: VERSION,
     });
     assert.equal(res.code, 0, `${mode.join(" ")}: ${res.stderr}`);
-    assert.match(res.stdout, /"version":\s*"0\.3\.0"/, mode.join(" "));
+    assert.match(res.stdout, /"version":\s*"\d+\.\d+\.\d+"/, mode.join(" "));
     child.kill();
   }
 });
@@ -281,7 +281,7 @@ test("pinned version missing from the manifest falls back to the direct URL", { 
   });
   assert.equal(res.code, 0, res.stderr);
   assert.match(String(res.stderr), /not in the release manifest; trying the direct URL/);
-  assert.match(res.stdout, /"version":\s*"0\.3\.0"/);
+  assert.match(res.stdout, /"version":\s*"\d+\.\d+\.\d+"/);
 });
 
 test("latest pin falls back to the newest cached install when offline", { timeout: 120_000 }, async (t) => {
@@ -300,7 +300,7 @@ test("latest pin falls back to the newest cached install when offline", { timeou
   const offline = runLauncher(["--version", "--json"], { ...env, TINYCLOUD_DIST_URL: "http://127.0.0.1:1" });
   assert.equal(offline.code, 0, offline.stderr);
   assert.match(String(offline.stderr), /using cached/);
-  assert.match(offline.stdout, /"version":\s*"0\.3\.0"/);
+  assert.match(offline.stdout, /"version":\s*"\d+\.\d+\.\d+"/);
 });
 
 test("missing manifest degrades to sidecar verification", { timeout: 120_000 }, async (t) => {
@@ -402,6 +402,35 @@ test("install.sh degrades on a truncated manifest instead of failing the install
   assert.match(out + "", /installed successfully/);
 });
 
+test("install.sh: a broken archive never strips the previous install", { timeout: 120_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-broken-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+  const installDir = path.join(work, "bin");
+  const env = { ...process.env, HOME: path.join(work, "home"), SHELL: "/bin/sh" };
+
+  // good install first
+  const good = await startFixture(tarball);
+  t.after(() => good.child.kill());
+  execFileSync("bash", [installScript, "--install-dir", installDir, "--version", VERSION], {
+    encoding: "utf8",
+    env: { ...env, TINYCLOUD_DIST_URL: good.url },
+  });
+  good.child.kill();
+
+  // upgrade attempt against a checksum-valid but unextractable archive
+  const broken = await startFixture(tarball, ["--broken-archive"]);
+  t.after(() => broken.child.kill());
+  const r = spawnSync("bash", [installScript, "--install-dir", installDir, "--version", VERSION], {
+    encoding: "utf8",
+    env: { ...env, TINYCLOUD_DIST_URL: broken.url },
+  });
+  assert.notEqual(r.status, 0);
+  assert.match(String(r.stderr), /not a valid archive; leaving the existing install untouched/);
+  assert.ok(fs.existsSync(path.join(installDir, "tinycloud")), "previous binary still present");
+  assert.ok(fs.existsSync(path.join(installDir, ".tinycloud-files")), "member record still present");
+});
+
 test("legacy (pre-record) upgrade keeps user skills, removes bundled-name ghosts", { timeout: 120_000 }, async (t) => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-legacy-"));
   t.after(() => fs.rmSync(work, { recursive: true, force: true }));
@@ -454,7 +483,7 @@ test("v-prefixed version and broken cache dir both recover", { timeout: 120_000 
     TINYCLOUD_VERSION: `v${VERSION}`, // v-prefix must normalize
   });
   assert.equal(res.code, 0, res.stderr);
-  assert.match(res.stdout, /"version":\s*"0\.3\.0"/);
+  assert.match(res.stdout, /"version":\s*"\d+\.\d+\.\d+"/);
   assert.ok(fs.existsSync(path.join(installRoot, "versions", VERSION, "tinycloud")), "binary restored");
   assert.ok(fs.existsSync(path.join(installRoot, "versions", VERSION, ".ok")), "broken dir reclaimed");
 });
@@ -527,7 +556,10 @@ test("latest without manifest reuses warm cache via ETag", { timeout: 120_000 },
 
   const first = runLauncher(["--version", "--json"], env);
   assert.equal(first.code, 0, first.stderr);
-  const okPath = path.join(installRoot, "versions", VERSION, ".ok");
+  // the alias path names the cache dir from the binary's self-reported
+  // version, which may be newer than the fixture pin with a real tarball
+  const [cachedVersion] = fs.readdirSync(path.join(installRoot, "versions"));
+  const okPath = path.join(installRoot, "versions", cachedVersion, ".ok");
   const before = fs.statSync(okPath).mtimeMs;
 
   const second = runLauncher(["--version", "--json"], env);

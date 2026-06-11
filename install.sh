@@ -230,6 +230,13 @@ elif [ "$HAVE_MANIFEST" -eq 1 ]; then
   # with sed), then rely on the pinned naming convention + per-tarball
   # sidecar for integrity. Never sed nested platform fields — on a
   # multi-platform manifest that can return the wrong platform's checksum.
+  if [ -n "$VERSION" ] && [ "${TINYCLOUD_REQUIRE_MANIFEST:-0}" = "1" ] \
+    && ! grep -q "\"${VERSION}\"" "$MANIFEST_FILE"; then
+    # Strict-mode parity with the python3 branch: a pinned version absent
+    # from the manifest must not slip through via the sidecar path.
+    echo "Error: Version ${VERSION} not found in the release manifest (strict mode)" >&2
+    exit 1
+  fi
   if [ -z "$VERSION" ]; then
     VERSION="$(channel_version "$CHANNEL")"
     if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
@@ -304,6 +311,18 @@ fi
 # --- Install --------------------------------------------------------------
 echo "Extracting to ${INSTALL_DIR}..."
 mkdir -p "$INSTALL_DIR"
+
+# Prove the archive extracts cleanly BEFORE any destructive cleanup — a
+# corrupt-but-checksum-absent archive must not strip the previous install
+# and then fail to replace it. (A failure of the second, real extract is
+# then limited to target-filesystem problems like disk-full.)
+EXTRACT_TEST="${TMP_DIR}/extract-test"
+mkdir -p "$EXTRACT_TEST"
+if ! tar -xzf "${TMP_DIR}/${TARBALL}" -C "$EXTRACT_TEST" 2>/dev/null; then
+  echo "Error: ${TARBALL} is not a valid archive; leaving the existing install untouched" >&2
+  exit 1
+fi
+rm -rf "$EXTRACT_TEST"
 
 # Remove stale distribution assets so upgrades never leave ghost files behind
 # (e.g. a skill directory the new version dropped).

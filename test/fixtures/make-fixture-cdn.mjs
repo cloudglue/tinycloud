@@ -51,14 +51,24 @@ if (!tarballPath || !fs.existsSync(tarballPath)) {
   process.exit(1);
 }
 
+const brokenArchive = has("--broken-archive"); // checksums match but the body is not a tarball
+
 const original = fs.readFileSync(tarballPath);
-const sha256 = crypto.createHash("sha256").update(original).digest("hex");
 
 let served = original;
 if (corrupt) {
   served = Buffer.from(original);
   served[Math.floor(served.length / 2)] ^= 0xff;
+} else if (brokenArchive) {
+  served = Buffer.from("this is not a gzip archive at all\n");
 }
+// --corrupt advertises the ORIGINAL's hash (mismatch must fail closed);
+// --broken-archive advertises the served body's hash (checksum passes,
+// extraction fails — exercises the pre-cleanup extract validation).
+const sha256 = crypto
+  .createHash("sha256")
+  .update(brokenArchive ? served : original)
+  .digest("hex");
 
 const baseUrl = () => `http://127.0.0.1:${server.address().port}`;
 
