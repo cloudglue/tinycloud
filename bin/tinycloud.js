@@ -62,14 +62,16 @@ async function cmdInstall(args, target) {
       const manifest = await fetchManifest().catch(() => null);
       const stable = manifest && manifest.channels && manifest.channels.stable;
       const resolved = stable ? normalizeVersion(stable) : null;
-      protect = protect.map((p) => (p === "latest" ? resolved : p)).filter(Boolean);
       if (!resolved) {
+        // Don't guess: pruning by age could delete the tree the pin runs.
         process.stderr.write(
-          "tinycloud: cannot resolve the 'latest' pin without the release manifest — pruning by age only\n"
+          "tinycloud: cannot resolve the 'latest' pin without the release manifest — skipping prune\n"
         );
+        return;
       }
+      protect = protect.map((p) => (p === "latest" ? resolved : p)).filter(Boolean);
     }
-    const removed = pruneVersions(2, protect);
+    const removed = pruneVersions(2, protect, target);
     console.log(removed.length ? `Pruned: ${removed.join(", ")}` : "Nothing to prune.");
     return;
   }
@@ -101,7 +103,7 @@ async function cmdUpdate(target) {
   // value must not fail an update that already completed. A "latest" pin
   // resolves to the stable we just installed.
   const pinned = pickVersionSafe();
-  const removed = pruneVersions(2, [res.version, pinned === "latest" ? res.version : pinned].filter(Boolean));
+  const removed = pruneVersions(2, [res.version, pinned === "latest" ? res.version : pinned].filter(Boolean), target);
   console.log(
     alreadyCurrent
       ? `tinycloud ${res.version} is already current (${res.dir})`

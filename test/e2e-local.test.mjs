@@ -365,6 +365,39 @@ test("install.sh upgrade removes ghost files from prior versions", { timeout: 12
   assert.ok(!out.includes("not part of a tinycloud"), "no mixed-dir warning on a normal upgrade");
 });
 
+test("legacy (pre-record) upgrade keeps user skills, removes bundled-name ghosts", { timeout: 120_000 }, async (t) => {
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-legacy-"));
+  t.after(() => fs.rmSync(work, { recursive: true, force: true }));
+  const tarball = process.env.TINYCLOUD_TEST_TARBALL || makeStubTarball(work);
+  const { child, url } = await startFixture(tarball);
+  t.after(() => child.kill());
+
+  const installDir = path.join(work, "bin");
+  const env = { ...process.env, HOME: path.join(work, "home"), SHELL: "/bin/sh", TINYCLOUD_DIST_URL: url };
+
+  // simulate a pre-record install: install, then drop the member record
+  execFileSync("bash", [installScript, "--install-dir", installDir, "--version", VERSION], { encoding: "utf8", env });
+  fs.rmSync(path.join(installDir, ".tinycloud-files"));
+  // a bundled-name ghost from the old version, and a user-authored skill
+  fs.mkdirSync(path.join(installDir, "skills", "media-artifact"), { recursive: true });
+  fs.writeFileSync(path.join(installDir, "skills", "media-artifact", "SKILL.md"), "old bundled\n");
+  fs.mkdirSync(path.join(installDir, "skills", "my-own-skill"), { recursive: true });
+  fs.writeFileSync(path.join(installDir, "skills", "my-own-skill", "SKILL.md"), "mine\n");
+
+  execFileSync("bash", [installScript, "--install-dir", installDir, "--version", VERSION], { encoding: "utf8", env });
+  // the ghost's old content must be gone — either the dir was removed (stub
+  // tarball ships no skills) or replaced by the new tarball's real copy
+  const ghostFile = path.join(installDir, "skills", "media-artifact", "SKILL.md");
+  if (fs.existsSync(ghostFile)) {
+    assert.notEqual(fs.readFileSync(ghostFile, "utf8"), "old bundled\n", "bundled-name ghost replaced");
+  }
+  assert.equal(
+    fs.readFileSync(path.join(installDir, "skills", "my-own-skill", "SKILL.md"), "utf8"),
+    "mine\n",
+    "user-authored skill survives the legacy upgrade"
+  );
+});
+
 test("v-prefixed version and broken cache dir both recover", { timeout: 120_000 }, async (t) => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), "tc-e2e-"));
   t.after(() => fs.rmSync(work, { recursive: true, force: true }));

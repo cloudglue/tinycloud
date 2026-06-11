@@ -357,7 +357,14 @@ else
   if [ "$DEDICATED" -eq 1 ]; then
     rm -f "${INSTALL_DIR:?}/tinycloud" "${INSTALL_DIR:?}/LICENSE.md" \
           "${INSTALL_DIR:?}/THIRD_PARTY_NOTICES.md"
-    rm -rf "${INSTALL_DIR:?}/skills" "${INSTALL_DIR:?}/workflows" "${INSTALL_DIR:?}/licenses"
+    # skills/ may hold user-authored skills: remove only the names the
+    # pre-record distributions actually bundled, never the whole tree.
+    for s in sales-coaching blog-post ad-analysis meeting-breakdown \
+             youtube-publish media-artifact skill-creator; do
+      rm -rf "${INSTALL_DIR:?}/skills/${s}"
+    done
+    rmdir "${INSTALL_DIR:?}/skills" 2>/dev/null || true
+    rm -rf "${INSTALL_DIR:?}/workflows" "${INSTALL_DIR:?}/licenses"
     rm -f "${INSTALL_DIR:?}/bin/bun" "${INSTALL_DIR:?}/bin/ffmpeg" "${INSTALL_DIR:?}/bin/ffprobe"
   elif [ "$HAS_ENTRIES" -eq 1 ]; then
     echo "Warning: ${INSTALL_DIR} contains files that are not part of a tinycloud" >&2

@@ -73,6 +73,30 @@ test("pruneVersions never removes protected versions", (t) => {
   assert.ok(fs.existsSync(path.join(root, "versions", "0.1.0", ".ok")), "protected version kept");
 });
 
+test("pruneVersions leaves peer-platform trees alone and never lets them crowd this platform", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "tc-prune-"));
+  t.after(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+    delete process.env.TINYCLOUD_INSTALL_DIR;
+  });
+  process.env.TINYCLOUD_INSTALL_DIR = root;
+  const mk = (v, target) => {
+    const dir = path.join(root, "versions", v);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, ".ok"), JSON.stringify({ version: v, target }));
+    fs.writeFileSync(path.join(dir, "tinycloud"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  };
+  mk("0.1.0", "darwin-arm64"); // this platform, oldest
+  mk("0.2.0", "darwin-arm64"); // this platform
+  mk("0.8.0", "linux-x64"); // peer machine's build (shared cache root)
+  mk("0.9.0", "linux-x64"); // peer machine's build
+
+  const removed = pruneVersions(2, [], "darwin-arm64");
+  assert.deepEqual(removed, [], "nothing removed: both this-platform builds fit keep=2");
+  assert.ok(fs.existsSync(path.join(root, "versions", "0.1.0", ".ok")), "only matching build not crowded out");
+  assert.ok(fs.existsSync(path.join(root, "versions", "0.9.0", ".ok")), "peer platform tree untouched");
+});
+
 test("pruneVersions removes broken entries without spending retention slots", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "tc-prune-"));
   t.after(() => {
