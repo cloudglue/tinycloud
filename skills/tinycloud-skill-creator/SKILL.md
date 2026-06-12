@@ -94,7 +94,9 @@ Edit the scaffolded files with the user's specifics.
   interpolated JS object literals.
 - If the deliverable should be a URL, finish with
   `tinycloud publish <html-or-dir> --visibility public|private --json` and
-  ask the user public-or-private before the first publish.
+  ask the user public-or-private before the first publish. Report `data.url`
+  (the stable site link) as the deliverable; fresh content can take ~1 min to
+  appear there — `data.version_url` serves that exact version immediately.
 
 ## 4. Validate and dry-run
 

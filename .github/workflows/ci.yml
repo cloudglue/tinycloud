@@ -117,16 +117,28 @@ jobs:
           TINYCLOUD_CMD="$TINYCLOUD_INSTALL_DIR/tinycloud" \
           EXPECTED_VERSION="${{ matrix.version }}" \
           bash scripts/smoke-test.sh
-      - name: Skill preflight (no credentials → exit 13)
+      - name: Skill preflight (exit 13 no-credentials, or exit 11 below skill floor)
+        # The skill's min_version can be ahead of the CDN binary (docs land
+        # with the release that introduces them), and the pinned matrix leg
+        # stays on an old version forever — so derive the expected exit code
+        # from the installed binary vs the skill floor instead of hardcoding.
         run: |
           export PATH="$TINYCLOUD_INSTALL_DIR:$PATH"
+          MIN=$(python3 -c "import json; print(json.load(open('skills/tinycloud/tinycloud-skill.json'))['tinycloud']['min_version'])")
+          VER=$(tinycloud --version --json </dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])")
           set +e
           out=$(bash skills/tinycloud/scripts/preflight.sh)
           code=$?
           set -e
-          echo "$out (exit $code)"
-          [ "$code" -eq 13 ] || { echo "expected exit 13 (missing credentials)"; exit 1; }
-          echo "$out" | grep -q "credentials missing"
+          echo "$out (exit $code; binary $VER, skill floor $MIN)"
+          LOWEST=$(printf '%s\n%s\n' "$VER" "$MIN" | sort -t. -k1,1n -k2,2n -k3,3n | head -n1)
+          if [ "$LOWEST" != "$MIN" ]; then
+            [ "$code" -eq 11 ] || { echo "expected exit 11 (binary $VER below skill floor $MIN)"; exit 1; }
+            echo "$out" | grep -q "below required"
+          else
+            [ "$code" -eq 13 ] || { echo "expected exit 13 (missing credentials)"; exit 1; }
+            echo "$out" | grep -q "credentials missing"
+          fi
       - name: Skill preflight (missing binary → exit 10)
         run: |
           set +e

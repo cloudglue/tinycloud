@@ -30,8 +30,9 @@ connector?" or an envelope field needs explaining.
   individual items by URI (e.g. `grain://recording/<id>`) so they become
   Cloudglue files.
 - **Source** — anything a verb accepts as input: a local path, URL,
-  `cloudglue://files/<id>` URI, connector URI, or collection. Bare file-id
-  UUIDs are not accepted — wrap them as `cloudglue://files/<id>`.
+  `cloudglue://files/<id>` URI, connector URI, collection, or a bare file-id
+  UUID (normalized to `cloudglue://files/<id>`; an existing local path of the
+  same name wins).
 - **`ref` / `source_id` / `result_id`** — stable identifiers in every
   envelope. `ref` is a reusable pointer to the analyzed source (including
   `cloud_ready` and the Cloudglue file id) that pipes between verbs;
@@ -68,6 +69,19 @@ connector?" or an envelope field needs explaining.
 - **Command step** — a workflow step that runs a local script (e.g. an HTML
   renderer); gated by `--allow-command` / recipe `permissions: [command]`.
 - **Cloudglue Sites** — hosted pages for published artifacts:
-  `tinycloud publish <html> --visibility public|private` returns a shareable
-  URL (private = Cloudglue account members only, same URL). Manage with
-  `publish list` and `publish unpublish <site-id | site-name | label>`.
+  `tinycloud publish <html> --visibility public|private` returns the stable
+  site URL (`{name}.cloudglue.site`) as `url` — the share link — plus a
+  `version_url` permalink to that exact version (live immediately; the site
+  URL can take up to a minute to serve fresh content). Private = Cloudglue
+  account members only, same URL. Manage with `publish list` (rows show
+  `published` / `site_version_id`) and
+  `publish unpublish <site-id | site-name | label>`.
+- **Video share (shareable asset)** — `tinycloud publish video <source>`
+  wraps a Cloudglue file in a hosted share page (`data.share.share_url`) plus
+  an HLS stream; one active share per (file, visibility). Private shares
+  embed via the `data.embed_snippet` `<cg-video>` tag, which only plays on a
+  private published site of the same account. The embed has playback
+  attributes (`autoplay`+`muted`, `loop`, `start-time`, `poster`,
+  `accent-color`, `exclusive`) and a JS API (`playSegment`, `seekTo`, media
+  events re-dispatched on the element) for custom site HTML — see
+  reference/verbs.md.

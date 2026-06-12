@@ -17,7 +17,7 @@ every verb. Regenerate doubts from it instead of trusting prose.
 | `library` | varies | no | Collections, connectors, local mirrors, sync |
 | `jobs` | network | yes | Poll/wait/forget tracked async jobs |
 | `workflow` | varies | no | Validate/plan/run workflow recipes |
-| `publish` | cloud | yes | Publish HTML/code artifacts as Cloudglue Sites |
+| `publish` | cloud | yes | Publish HTML/code artifacts as Cloudglue Sites; share videos |
 | `setup` | local | no | Credentials and service connections |
 
 Cloud verbs run through the configured Cloudglue API key.
@@ -150,10 +150,55 @@ Republishing identical content makes no network calls; flipping visibility
 patches without re-uploading. `list`/`unpublish` are gated by the
 `publish.manage.v1` feature id.
 
+The returned `data.url` is the stable site link (`{name}.cloudglue.site`) —
+share that one. It can take up to a minute to serve fresh content after a
+publish (a brief 403 there is propagation, not a failure); `data.version_url`
+is a permalink to that exact version and is live immediately. `publish list`
+rows carry `published` (whether a version is live at `url`) and
+`site_version_id`; text output marks unpublished sites with
+`(no published version)`.
+
 Note: `--name` is a label for the artifact (republishing reuses it) — the
 site itself gets a generated name (e.g. `young-fire-2486`) shown by
 `publish list`. `unpublish` resolves any of: the `site_id` UUID, the
 generated site name, or your `--name` label.
+
+### publish video — share a video
+
+```bash
+tinycloud publish video <source> [--visibility public|private]   # default public
+  [--name <title>] [--segment-id <id>] --json
+tinycloud publish video list [--in <source>] [--visibility public|private] --json
+tinycloud publish video unpublish <share-id | source> --json   # --visibility disambiguates
+```
+
+Wraps a Cloudglue file in a shareable asset — a stable hosted share page
+(`data.share.share_url`) plus an HLS stream. Local sources upload first (same
+prepare step as `watch`). One active share per (file, visibility); re-running
+returns the existing share. Stream processing surfaces as a `pending`
+envelope — re-run per its `next` hint. Gated by the `publish.video.v1`
+feature id.
+
+- Public: `data.share.stream_url` is plain HLS usable anywhere players
+  support it — bare `<video>` tags only play HLS in Safari.
+- Private: only account members can watch; stream URLs are signed and
+  short-lived (redacted in machine output — never hard-code them). Embed with
+  `data.embed_snippet` (a `<cg-video share-id="...">` tag), which only plays
+  on a PRIVATE published site of the same account — `tinycloud publish`
+  rejects an artifact with a private embed targeted at a public site.
+
+When generating custom site HTML around a `<cg-video>` embed, use the
+component's built-ins instead of reinventing them. It defaults to a
+responsive 16:9 dark placeholder (override with plain page CSS on the
+`cg-video` selector); mount-time attributes: `autoplay` (pair with `muted` or
+browsers block it), `loop`, `start-time`, `poster`, `accent-color`, and
+`exclusive` (put it on every player in a gallery so starting one pauses the
+rest). Its JS API queues until ready — `playSegment(start, end?)`,
+`seekTo()`, `play()`/`pause()` — and media events are re-dispatched on the
+element (`timeupdate`, `ended`, `cg-ready`); prefer `playSegment` over
+hand-rolled seek logic for "click a moment to play that segment" pages. The
+full reference ships with the binary as `references/cg-video.md` inside the
+bundled media-artifact skill (under the install's `skills/` directory).
 
 ### setup — credentials
 
@@ -178,3 +223,9 @@ exact-match history), `--no-upload` (refuse cloud upload → `needs_upload`),
 `ask`/`probe` always call the cloud; use `search` for a free cached lookup.
 
 Source reuse (`watch`/`extract`/`caption`): `--source-id <id>`, `--result-id <id>`.
+
+Sources: local paths, URLs, `cloudglue://files/<id>` URIs,
+`collection:col_…`, or a bare Cloudglue file-id UUID — bare ids are
+normalized to `cloudglue://files/<id>` (an existing local path of the same
+name wins), so file ids echoed in tinycloud output can be passed straight
+back as sources or `--in` scopes.
