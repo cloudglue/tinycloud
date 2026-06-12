@@ -48,7 +48,9 @@ connector?" or an envelope field needs explaining.
   mirrored in Cloudglue, so later `extract`/`ask`/`search` reuse it instead
   of re-analyzing.
 - **Segmentation** — how a video is split for analysis: `chapters`
-  (semantic), `shots` (visual cuts), `uniform:<seconds>` (fixed windows).
+  (semantic), `shots` (visual cuts; bounds tunable via
+  `--shot-min-seconds`/`--shot-max-seconds`, sub-second min allowed),
+  `uniform:<seconds>` (fixed windows).
 - **Cache layers** — `meta.cache` reports `identity` (is this the same file
   we've seen?) and `enrichment` (analysis results) as
   `hit | miss | written | skipped`.
@@ -83,5 +85,6 @@ connector?" or an envelope field needs explaining.
   private published site of the same account. The embed has playback
   attributes (`autoplay`+`muted`, `loop`, `start-time`, `poster`,
   `accent-color`, `exclusive`) and a JS API (`playSegment`, `seekTo`, media
-  events re-dispatched on the element) for custom site HTML — see
-  reference/verbs.md.
+  events re-dispatched on the element) for custom site HTML, and plays
+  standalone or inside the container components (`<cg-playlist>`,
+  `<cg-grid>`, `<cg-chapters>`) — see reference/verbs.md.

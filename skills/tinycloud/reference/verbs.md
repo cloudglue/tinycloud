@@ -31,10 +31,17 @@ Flags shared by most verbs are listed once at the bottom.
 
 ```bash
 tinycloud watch <source> [--segment uniform:20|chapters|shots|segments]
+  [--shot-min-seconds <s>] [--shot-max-seconds <s>]
   [--profile default|light|custom] [--speech-only | --visual-only]
   [--start <t>] [--end <t>] [--transcript] [--content] [--json-index]
   [--background]
 ```
+
+Shot bounds tune `--segment shots` only: min 0.6–600 (fractional/sub-second
+values catch flash frames and rapid cuts), max 1–600, min ≤ max. Out-of-range
+or wrong-mode values fail with a validation envelope before any upload. The
+bounds are part of the cache key, so tuned and default shot passes never
+collide.
 
 ### extract — structured facts
 
@@ -42,8 +49,12 @@ tinycloud watch <source> [--segment uniform:20|chapters|shots|segments]
 tinycloud extract "<query>" <source> --json          # free-form query
 tinycloud extract --schema ./schema.json <source>    # JSON-schema-shaped output
   [--segment-level] [--segmentation chapters|shots|segments]
+  [--shot-min-seconds <s>] [--shot-max-seconds <s>]
   [--include-thumbnails] [--transcript-mode] [--background]
 ```
+
+`--shot-min-seconds`/`--shot-max-seconds` work exactly as on `watch`, against
+`--segmentation shots`.
 
 ### caption — subtitles and transcripts
 
@@ -105,8 +116,22 @@ tinycloud library collections show <col_id> --json
 tinycloud library collections sync <col_id> --artifacts descriptions,transcripts,thumbnails,metadata --json
 tinycloud library connectors list --json
 tinycloud library connectors files <connector-id> [--limit 25] [--page-token <t>] --json
-tinycloud library connectors sync <connector-id> <uri> --json   # e.g. grain://recording/<id>
+tinycloud library connectors sync [<connector-id>] <uri-share-link-or-public-url> --json
 ```
+
+`connectors sync` materializes its argument into a Cloudglue file without
+starting analysis (idempotent). The connector id is optional — with just a
+URI or link, sync routes through the matching connector type. Connector URIs
+(`grain://recording/<id>`, `gdrive://file/<id>`, `dropbox://<path>`,
+`zoom://uuid/<uuid>`, `s3://<bucket>/<key>`, …) and share links are accepted:
+Dropbox file share links sync server-side via the connector's OAuth
+(including login-gated links); `zoom.us/rec/share` links resolve best-effort
+(Zoom mints a new token per copy — the recording-detail link is the reliable
+form). Link warnings are advisory and surface in `data.warnings` rather than
+blocking the sync. Non-connector public URLs (direct media URLs, TikTok,
+Loom, public Dropbox links without a connector) sync into a standalone
+Cloudglue file via direct URL ingestion — same command, no connector needed.
+YouTube URLs cannot sync; use `tinycloud grab` instead.
 
 `connectors files` also takes provider-specific filters: `--from`/`--to`
 (Zoom, Grain dates), `--folder-id` (Google Drive), `--path` (Dropbox),
@@ -196,8 +221,24 @@ browsers block it), `loop`, `start-time`, `poster`, `accent-color`, and
 rest). Its JS API queues until ready — `playSegment(start, end?)`,
 `seekTo()`, `play()`/`pause()` — and media events are re-dispatched on the
 element (`timeupdate`, `ended`, `cg-ready`); prefer `playSegment` over
-hand-rolled seek logic for "click a moment to play that segment" pages. The
-full reference ships with the binary as `references/cg-video.md` inside the
+hand-rolled seek logic for "click a moment to play that segment" pages.
+
+For multi-video or segment-navigation pages, prefer the container components
+over hand-rolled galleries and segment-list JS:
+
+- `<cg-playlist>` + `<cg-playlist-item share-id="…">` — one player plus a
+  clickable track list, with auto-advance.
+- `<cg-grid>` + `<cg-grid-item share-id="…">` — lazy poster-card gallery,
+  inline or lightbox modal, at most one live player.
+- `<cg-chapters>` + `<cg-chapter start="…" [end="…"]>` — segment navigation
+  bound to a player by id; an `end` attribute plays just that clip via
+  `playSegment`. Hand-rolled `playSegment` calls remain the fallback for
+  fully custom layouts.
+
+Share ids inside `<cg-playlist-item>`/`<cg-grid-item>` tags count toward the
+private-embed guard: `tinycloud publish` rejects an artifact embedding a
+private share — directly or through a container — on a public site. The full
+reference ships with the binary as `references/cg-video.md` inside the
 bundled media-artifact skill (under the install's `skills/` directory).
 
 ### setup — credentials

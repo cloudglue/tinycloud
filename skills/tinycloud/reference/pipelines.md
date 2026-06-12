@@ -102,3 +102,50 @@ tinycloud watch ./talk.mp4 --json \
   | tinycloud extract "the three strongest quotes with timestamps" --json \
   | tinycloud clip cut --from-findings -o ./tinycloud-output/quotes/ --json
 ```
+
+## Render-review loop (videos your code generates)
+
+When the host project's code produces a video (Remotion, Manim, ffmpeg
+filter graphs, slide-render pipelines, recorded E2E runs), don't stop at a
+successful render exit code — a clean render is not a good video. Use
+tinycloud as the eyes in the edit loop:
+
+```bash
+# 1. Render with the project's own tooling (example: Remotion).
+npx remotion render Promo out/promo.mp4
+
+# 2. Evaluate the result.
+tinycloud watch ./out/promo.mp4 --segment shots --json \
+  | tinycloud extract "Evaluate pacing, text readability and clipping, scene \
+      continuity, and audio/visual sync. Return timestamped findings with \
+      severity and concrete edit instructions." --json
+
+# 3. Map each finding's timestamp to code (frame = seconds x fps for
+#    frame-based renderers), apply fixes, rerender to the SAME path.
+
+# 4. Re-evaluate, feeding the previous findings back so the model confirms fixes.
+tinycloud watch ./out/promo.mp4 --segment shots --json \
+  | tinycloud extract "Re-evaluate this render. Previous findings: <summarize \
+      prior findings>. Confirm whether each is resolved and report any new \
+      issues." --json
+```
+
+Loop rules:
+
+- Stop when findings are empty or low-severity only; then report done with
+  the final findings summary. "Done" means evaluated, not rendered.
+- Hunting sub-second flash frames or rapid cuts? Tighten the shot pass with
+  `--shot-min-seconds 0.6` (fractional values allowed);
+  `--shot-max-seconds` caps overly long shots the same way.
+- Each rerender is a new file, so each iteration uploads and runs through
+  the configured Cloudglue API key
+  (https://app.cloudglue.dev/home/billing/rate-card). Tell the user, and
+  prefer short/low-res preview renders while iterating when the project
+  supports them.
+- Reuse the same output path between iterations so stale renders don't pile
+  up; the new file content makes the cache treat it as a new source (that is
+  correct — you want the new render evaluated, not the cached old one).
+
+You own the renderer-specific half of the loop (mapping timestamps to frames
+and code, editing, rerendering); tinycloud only ever sees the media file.
+The loop applies to any pipeline that emits video.
