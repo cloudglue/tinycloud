@@ -187,6 +187,19 @@ feature id.
   on a PRIVATE published site of the same account — `tinycloud publish`
   rejects an artifact with a private embed targeted at a public site.
 
+When generating custom site HTML around a `<cg-video>` embed, use the
+component's built-ins instead of reinventing them. It defaults to a
+responsive 16:9 dark placeholder (override with plain page CSS on the
+`cg-video` selector); mount-time attributes: `autoplay` (pair with `muted` or
+browsers block it), `loop`, `start-time`, `poster`, `accent-color`, and
+`exclusive` (put it on every player in a gallery so starting one pauses the
+rest). Its JS API queues until ready — `playSegment(start, end?)`,
+`seekTo()`, `play()`/`pause()` — and media events are re-dispatched on the
+element (`timeupdate`, `ended`, `cg-ready`); prefer `playSegment` over
+hand-rolled seek logic for "click a moment to play that segment" pages. The
+full reference ships with the binary as `references/cg-video.md` inside the
+bundled media-artifact skill (under the install's `skills/` directory).
+
 ### setup — credentials
 
 ```bash

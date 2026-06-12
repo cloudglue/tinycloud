@@ -157,7 +157,10 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
 - Never pair a private video share with a public site: private stream URLs
   are signed and short-lived (never hard-code them) — embed via
   `data.embed_snippet` (`<cg-video>`), which only plays on a private site of
-  the same account.
+  the same account. When writing HTML around an embed, use the component's
+  built-ins (`autoplay`+`muted`, `loop`, `start-time`, `exclusive`; JS
+  `playSegment(start, end?)`) rather than hand-rolled players — details in
+  [reference/verbs.md](reference/verbs.md).
 
 ## 5. Reference (load on demand)
 

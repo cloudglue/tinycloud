@@ -80,4 +80,8 @@ connector?" or an envelope field needs explaining.
   wraps a Cloudglue file in a hosted share page (`data.share.share_url`) plus
   an HLS stream; one active share per (file, visibility). Private shares
   embed via the `data.embed_snippet` `<cg-video>` tag, which only plays on a
-  private published site of the same account.
+  private published site of the same account. The embed has playback
+  attributes (`autoplay`+`muted`, `loop`, `start-time`, `poster`,
+  `accent-color`, `exclusive`) and a JS API (`playSegment`, `seekTo`, media
+  events re-dispatched on the element) for custom site HTML — see
+  reference/verbs.md.
