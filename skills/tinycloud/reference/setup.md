@@ -95,3 +95,9 @@ binary reports in `--version --json`.
 | `CLOUDGLUE_API_KEY` | Cloudglue API key (alternative to `tinycloud setup cloudglue`) |
 | `TINYCLOUD_VERSION` | npm launcher: run a specific binary version |
 | `TINYCLOUD_INSTALL_DIR` | npm launcher: cache root (default `~/.tinycloud`) |
+| `TINYCLOUD_HTTP_TIMEOUT_MS` | Hard deadline per Cloudglue request (default 120s; `0` disables) |
+| `TINYCLOUD_UPLOAD_TIMEOUT_MS` | Deadline for upload-shaped requests (default 60min; `0` disables) |
+
+Every Cloudglue request carries a hard deadline, so a stalled route can never
+hang the CLI indefinitely; a timeout surfaces as a retryable `upstream` error
+envelope whose message names the knob to adjust.

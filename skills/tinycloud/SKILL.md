@@ -91,6 +91,7 @@ tinycloud clip burn ./demo.mp4 --subtitle-file ./captions/demo.srt -o ./out.mp4 
 
 # Remote videos, collections, async jobs
 tinycloud grab https://youtu.be/<id> -o ./tinycloud-output/grabbed/ --json
+tinycloud library connectors sync https://example.com/clip.mp4 --json  # public URL → Cloudglue file (not YouTube — use grab)
 tinycloud library collections list --json
 tinycloud watch ./long.mp4 --background --json   # returns pending + meta.job_id
 tinycloud jobs wait <job-id> --timeout 120s --json
@@ -105,6 +106,9 @@ tinycloud publish video ./demo.mp4 --visibility public --json
 
 Per-verb details and all flags: [reference/verbs.md](reference/verbs.md).
 Multi-video batching and pipe semantics: [reference/pipelines.md](reference/pipelines.md).
+Evaluating a video the host project's code rendered (render → evaluate →
+edit → rerender): the render-review loop in
+[reference/pipelines.md](reference/pipelines.md).
 
 ## 3. Workflows (packaged recipes)
 
@@ -159,7 +163,9 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   `data.embed_snippet` (`<cg-video>`), which only plays on a private site of
   the same account. When writing HTML around an embed, use the component's
   built-ins (`autoplay`+`muted`, `loop`, `start-time`, `exclusive`; JS
-  `playSegment(start, end?)`) rather than hand-rolled players — details in
+  `playSegment(start, end?)`) and the container components
+  (`<cg-playlist>`, `<cg-grid>`, `<cg-chapters>`) rather than hand-rolled
+  players, galleries, or segment-list JS — details in
   [reference/verbs.md](reference/verbs.md).
 
 ## 5. Reference (load on demand)

@@ -59,7 +59,11 @@ the exit code alone.
 `needs_download`, `visual_analysis_requires_download`, `upstream`.
 
 `upstream` on a piped command means the upstream envelope was not `ready` —
-fix the upstream failure, don't retry downstream.
+fix the upstream failure, don't retry downstream. `upstream` from a cloud
+call itself is a Cloudglue API failure; when it's a request deadline
+(retryable, message names `TINYCLOUD_HTTP_TIMEOUT_MS` /
+`TINYCLOUD_UPLOAD_TIMEOUT_MS`), the server may still be processing — retry
+or raise the knob.
 
 ## JSON vs JSONL vs text
 
