@@ -106,21 +106,21 @@ Cloud verbs run through your configured Cloudglue API key (billed per the
 network verbs are free. Every command prints a JSON envelope on stdout (logs
 go to stderr) — pass `--json`.
 
-| Command | Cost | What it does |
-|---|---|---|
-| `watch` | cloud | Analyze a video → reusable cached context + Cloudglue-ready ref |
-| `extract` | cloud | Pull structured facts, entities, or moments (free-form or JSON-schema) |
-| `caption` | varies | Subtitles and transcripts (SRT/VTT/ASS) |
-| `search` | local | Keyword search over cached video context |
-| `probe` | cloud | Semantic moment/video search over a Cloudglue scope |
-| `ask` | cloud | Grounded Q&A over one or more videos |
-| `clip` | local | ffmpeg-backed cut, thumbs, stitch, transcode, burn, split, audio, info |
-| `grab` | network | Download a remote video (YouTube, TikTok, Loom, direct) |
-| `library` | varies | Browse and sync Cloudglue collections and connectors |
-| `jobs` | network | Poll, wait on, or forget async jobs |
-| `workflow` | varies | Run packaged pipeline recipes (see below) |
-| `publish` | cloud | Publish HTML artifacts as Cloudglue Sites; share videos |
-| `setup` | local | Configure the Cloudglue API key and service connections |
+| Command | What it does |
+|---|---|
+| `watch` | Analyze a video → reusable cached context + Cloudglue-ready ref |
+| `extract` | Pull structured facts, entities, or moments (free-form or JSON-schema) |
+| `caption` | Subtitles and transcripts (SRT/VTT/ASS) |
+| `search` | Keyword search over cached video context |
+| `probe` | Semantic moment/video search over a Cloudglue scope |
+| `ask` | Grounded Q&A over one or more videos |
+| `clip` | ffmpeg-backed cut, thumbs, stitch, transcode, burn, split, audio, info |
+| `grab` | Download a remote video (YouTube, TikTok, Loom, direct) |
+| `library` | Browse and sync Cloudglue collections and connectors |
+| `jobs` | Poll, wait on, or forget async jobs |
+| `workflow` | Run packaged pipeline recipes (see below) |
+| `publish` | Publish HTML artifacts as Cloudglue Sites; share videos |
+| `setup` | Configure the Cloudglue API key and service connections |
 
 ```bash
 tinycloud watch ./demo.mp4 --json
