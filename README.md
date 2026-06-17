@@ -50,13 +50,20 @@ This repo also distributes agent skills that teach coding agents (Claude
 Code, Codex, and anything else following the
 [Agent Skills](https://agentskills.io) standard) to drive the tinycloud CLI.
 
-**One command** (detects your agent and installs the bundled skills):
+**One command** (in a terminal it prompts you to pick the target agents):
 
 ```bash
-npx @cloudglue/tinycloud skills install          # project-level (.claude/skills, .agents/skills)
-npx @cloudglue/tinycloud skills install --global # ~/.claude/skills (all your projects)
+npx @cloudglue/tinycloud skills install                       # menu: claude-code, agents, codex, cursor
+npx @cloudglue/tinycloud skills install --harness cursor,codex  # pick targets non-interactively
+npx @cloudglue/tinycloud skills install --global              # ~/.claude/skills (Claude Code only)
 npx @cloudglue/tinycloud skills install --skill tinycloud,blog-post   # just some
 ```
+
+Each agent reads skills from its own `<dir>/skills`: `claude-code` → `.claude`,
+`agents` → `.agents` (the universal [Agent Skills](https://agentskills.io)
+layout), `codex` → `.codex`, `cursor` → `.cursor`. The menu preselects dirs
+that already exist; piped/CI runs (or `--yes`) skip it and install into
+whichever dirs exist, defaulting to `.claude/skills` when none do.
 
 **Claude Code** (as a plugin):
 
@@ -91,8 +98,8 @@ To give every agent session in a repo the same skills, commit them:
 
 ```bash
 cd your-project
-npx @cloudglue/tinycloud skills install     # writes .claude/skills/ (and .agents/skills/ if present)
-git add .claude .agents 2>/dev/null; git commit -m "Add tinycloud agent skills"
+npx @cloudglue/tinycloud skills install --harness claude-code,agents   # or pick from the menu
+git add .claude .agents .codex .cursor 2>/dev/null; git commit -m "Add tinycloud agent skills"
 ```
 
 Optionally add a line to your project's `CLAUDE.md` so agents reach for them:

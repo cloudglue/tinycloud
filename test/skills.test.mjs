@@ -4,11 +4,12 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { Readable, Writable } from "node:stream";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
-const { listBundledSkills, resolveTargets, installSkills } = require("../lib/skills.js");
+const { listBundledSkills, resolveTargets, promptForTargets, installSkills } = require("../lib/skills.js");
 const launcher = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "bin", "tinycloud.js");
 
 function tmpdir() {
@@ -36,17 +37,60 @@ test("resolveTargets detects harness dirs", (t) => {
   fs.mkdirSync(path.join(cwd, ".agents"));
   assert.deepEqual(
     resolveTargets({ cwd }).map((x) => x.name),
-    ["codex"]
+    ["agents"]
   );
 
+  fs.mkdirSync(path.join(cwd, ".cursor"));
+  fs.mkdirSync(path.join(cwd, ".codex"));
   fs.mkdirSync(path.join(cwd, ".claude"));
   assert.deepEqual(
     resolveTargets({ cwd }).map((x) => x.name).sort(),
-    ["claude-code", "codex"]
+    ["agents", "claude-code", "codex", "cursor"]
   );
 
   // explicit dir wins over detection
   assert.deepEqual(resolveTargets({ cwd, dir: "/tmp/x" }), [{ name: "custom", dir: path.resolve("/tmp/x") }]);
+});
+
+test("resolveTargets honors --harness selection and aliases", () => {
+  const cwd = "/work";
+  // explicit harness ids override detection and create their <dir>/skills paths
+  assert.deepEqual(
+    resolveTargets({ cwd, harness: ["cursor", "codex"] }),
+    [
+      { name: "cursor", dir: path.join(cwd, ".cursor", "skills") },
+      { name: "codex", dir: path.join(cwd, ".codex", "skills") },
+    ]
+  );
+  // "claude" is an alias for claude-code
+  assert.deepEqual(
+    resolveTargets({ cwd, harness: ["claude"] }),
+    [{ name: "claude-code", dir: path.join(cwd, ".claude", "skills") }]
+  );
+  assert.throws(() => resolveTargets({ cwd, harness: ["nope"] }), /Unknown harness/);
+});
+
+test("promptForTargets lists harnesses and parses a comma-separated pick", async (t) => {
+  const cwd = tmpdir();
+  t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(cwd, ".claude")); // detected → preselected
+
+  const ask = async (line) => {
+    let out = "";
+    const output = new Writable({ write(chunk, _enc, cb) { out += chunk; cb(); } });
+    const targets = await promptForTargets({ cwd, input: Readable.from([line]), output });
+    return { targets, out };
+  };
+
+  // pick 1 (claude-code) + 4 (cursor)
+  const picked = await ask("1,4\n");
+  assert.deepEqual(picked.targets.map((x) => x.name), ["claude-code", "cursor"]);
+  assert.match(picked.out, /\(detected\)/); // .claude shown as detected
+  assert.match(picked.out, /cursor/);
+
+  // empty input → the preselected (detected) default
+  const empty = await ask("\n");
+  assert.deepEqual(empty.targets.map((x) => x.name), ["claude-code"]);
 });
 
 test("installSkills copies full skill subtrees and respects --force", (t) => {
@@ -92,5 +136,9 @@ test("bin: skills list and unknown-skill error", () => {
   assert.throws(
     () => execFileSync(process.execPath, [launcher, "skills", "install", "--skill", "nope", "--dir", "/tmp/x"], { encoding: "utf8", stdio: "pipe" }),
     /Unknown skill/
+  );
+  assert.throws(
+    () => execFileSync(process.execPath, [launcher, "skills", "install", "--harness", "nope", "--dir", "/tmp/x"], { encoding: "utf8", stdio: "pipe" }),
+    /Unknown harness/
   );
 });

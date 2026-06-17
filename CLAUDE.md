@@ -113,8 +113,16 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
 
 - The npm package bundles `skills/` (see `files` in package.json);
   `npx @cloudglue/tinycloud skills install` (`lib/skills.js`) copies them
-  into detected harness dirs (`.claude/skills/`, `.agents/skills/`;
-  `--global`/`--dir`/`--skill` override) without touching the binary cache.
+  into harness dirs without touching the binary cache. The four known
+  harnesses live in the `HARNESSES` table, each at `<configDir>/skills`:
+  `claude-code`→`.claude`, `agents`→`.agents` (universal agentskills.io
+  layout), `codex`→`.codex`, `cursor`→`.cursor`. In a TTY with no explicit
+  target it shows an interactive menu (detected dirs preselected, via
+  `promptForTargets`); non-interactive/`--yes` runs use `resolveTargets`,
+  which installs into every detected dir (default `.claude` when none).
+  `--harness <ids>` selects explicitly; `--global` is Claude-only
+  (`~/.claude/skills`); `--dir`/`--skill` also override. `resolveTargets`
+  stays pure (no prompting) so it's unit-testable.
 - `skills/tinycloud/` is the flagship: SKILL.md + `reference/*.md`
   (progressive disclosure) + `scripts/preflight.sh` + `tinycloud-skill.json`
   (compat manifest: `min_version`, `supported_range`, `required_features`).
