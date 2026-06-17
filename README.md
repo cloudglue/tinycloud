@@ -101,9 +101,9 @@ CLI — see the tinycloud skill; run tinycloud-init if the CLI isn't set up.`
 
 ## Commands
 
-Cloud verbs run through your configured Cloudglue API key (billed per the
+Cloud commands run through your configured Cloudglue API key (billed per the
 [rate card](https://app.cloudglue.dev/home/billing/rate-card)); local and
-network verbs are free. Every command prints a JSON envelope on stdout (logs
+network commands are free. Every command prints a JSON envelope on stdout (logs
 go to stderr) — pass `--json`.
 
 | Command | What it does |
@@ -122,11 +122,18 @@ go to stderr) — pass `--json`.
 | `publish` | Publish HTML artifacts as Cloudglue Sites; share videos |
 | `setup` | Configure the Cloudglue API key and service connections |
 
+A few common invocations:
+
 ```bash
+# Analyze a video into reusable, cached context + a Cloudglue-ready ref
 tinycloud watch ./demo.mp4 --json
+# Pull structured findings (free-form query here; pass --schema for a fixed shape)
 tinycloud extract "key moments with timestamps" ./demo.mp4 --json
+# Subtitles plus a markdown transcript
 tinycloud caption ./demo.mp4 --format srt --transcript --json
+# Trim a clip locally — no upload, ffmpeg-backed
 tinycloud clip cut ./demo.mp4 --start 12 --end 28 -o clip.mp4 --json
+# Grounded Q&A over one or more videos
 tinycloud ask "What objections came up?" --in ./demo.mp4 --json
 ```
 
