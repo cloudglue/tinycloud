@@ -88,3 +88,17 @@ connector?" or an envelope field needs explaining.
   events re-dispatched on the element) for custom site HTML, and plays
   standalone or inside the container components (`<cg-playlist>`,
   `<cg-grid>`, `<cg-chapters>`) — see reference/verbs.md.
+
+## State and isolation (0.3.3+)
+
+- **Home** — the directory holding all tinycloud state for a run: config,
+  sessions, cache, jobs, artifacts, and skills. Default `~/.tinycloud`;
+  relocate it with `--home <dir>` or `$TINYCLOUD_HOME`.
+- **Profile** — a named, fully isolated home, selected with `--profile <name>`
+  and managed by `tinycloud profile list|show|create|use|remove`. Lets multiple
+  accounts or installs run side by side without cross-contamination. (Distinct
+  from `watch --profile`, which selects an analysis profile.)
+- **Project scope** — sessions and capabilities keyed to a project (its git
+  root). Sessions live under `<home>/projects/<project-key>/sessions`, and a
+  project-local `.tinycloud/config.json` can pin tool/skill allowlists and an
+  output base — precedence is CLI flags > project config > global config.

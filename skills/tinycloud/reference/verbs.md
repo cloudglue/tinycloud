@@ -23,6 +23,24 @@ every verb. Regenerate doubts from it instead of trusting prose.
 Cloud verbs run through the configured Cloudglue API key.
 `caption`/`library`/`workflow` vary by what they end up doing.
 
+## Global flags (0.3.3+)
+
+Leading options (placed *before* the verb) and agent-level allowlists, separate
+from the per-verb flags below. `--home`/`--profile` and the `profile` verb are
+host concerns and are intentionally absent from `commands --json`.
+
+- `--home <dir>` / `$TINYCLOUD_HOME` — run against an isolated state home
+  (config, sessions, cache, jobs, artifacts, skills) instead of `~/.tinycloud`.
+- `--profile <name>` — use a named profile's home. Managed by
+  `tinycloud profile list|show|create|use|remove`
+  (`create <name> [--home <dir>] [--copy-from <name>] [--description <text>] [--default]`).
+  Unrelated to `watch --profile default|light|custom` (an analysis profile).
+- `--skills <list>` (0.3.3+) / `--tools <list>` — comma-separated agent skill /
+  tool allowlists (omit = all); also settable per project via
+  `.tinycloud/config.json`.
+
+Profiles, project-scoped sessions, and `.tinycloud/config.json`: [setup.md](setup.md).
+
 ## Per-verb flags
 
 Flags shared by most verbs are listed once at the bottom.

@@ -110,6 +110,13 @@ Evaluating a video the host project's code rendered (render → evaluate →
 edit → rerender): the render-review loop in
 [reference/pipelines.md](reference/pipelines.md).
 
+Isolation & scope (0.3.3+): `--home <dir>` / `$TINYCLOUD_HOME` and
+`--profile <name>` are leading flags (before the verb) that run against an
+isolated state home; the agent also takes `--skills <list>` alongside
+`--tools <list>`, and a project-local `.tinycloud/config.json` can pin those
+allowlists and an output base. Sessions are scoped per project. Details:
+[reference/setup.md](reference/setup.md).
+
 ## 3. Workflows (packaged recipes)
 
 Repeatable pipelines run with one command and write outputs into a run
@@ -170,7 +177,7 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
 
 ## 5. Reference (load on demand)
 
-- [reference/setup.md](reference/setup.md) — install, credentials, env vars, preflight details
+- [reference/setup.md](reference/setup.md) — install, credentials, env vars, preflight, profiles & project scope
 - [reference/verbs.md](reference/verbs.md) — every verb, flag, and cost class
 - [reference/envelope.md](reference/envelope.md) — full envelope schema, statuses, error codes, exit codes
 - [reference/pipelines.md](reference/pipelines.md) — pipes, batching, jobs, cache/spend-control flags

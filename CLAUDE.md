@@ -28,16 +28,16 @@ node --test test/unit.test.mjs            # just the unit suite
 TINYCLOUD_TEST_TARBALL=~/Downloads/tinycloud-darwin-arm64.tar.gz npm test   # e2e against a real dist tarball
 
 # Contract smoke tests against an installed/extracted binary
-TINYCLOUD_CMD=/path/to/tinycloud EXPECTED_VERSION=0.3.2 bash scripts/smoke-test.sh
+TINYCLOUD_CMD=/path/to/tinycloud EXPECTED_VERSION=0.3.3 bash scripts/smoke-test.sh
 
 # Serve a tarball as a fake CDN (modes: --corrupt, --no-manifest)
-node test/fixtures/make-fixture-cdn.mjs --tarball <path>.tar.gz --version 0.3.2 --port 8787
+node test/fixtures/make-fixture-cdn.mjs --tarball <path>.tar.gz --version 0.3.3 --port 8787
 TINYCLOUD_DIST_URL=http://127.0.0.1:8787 TINYCLOUD_INSTALL_DIR=$(mktemp -d) node bin/tinycloud.js --version --json
 TINYCLOUD_DIST_URL=http://127.0.0.1:8787 bash install.sh --install-dir $(mktemp -d)/bin
 
 # Release manifest tooling (maintainer)
-node scripts/generate-manifest.mjs --version 0.3.2 --from-cdn   # build manifest + .sha256 sidecars
-node scripts/generate-manifest.mjs --check --version 0.3.2      # verify live CDN matches manifest
+node scripts/generate-manifest.mjs --version 0.3.3 --from-cdn   # build manifest + .sha256 sidecars
+node scripts/generate-manifest.mjs --check --version 0.3.3      # verify live CDN matches manifest
 
 # Plugin metadata validation
 claude plugin validate .
@@ -102,7 +102,11 @@ stdout (logs on stderr) with `status`:
 `ready | pending | needs_credentials | needs_upload | needs_download | paused | error`
 → exit codes 0/0/2/3/3/0/1. `tinycloud commands --json` is the authoritative
 flag list — verify doc claims against it, not memory (a doc bug shipped once
-because `--cached` only exists on watch/extract/caption/workflow).
+because `--cached` only exists on watch/extract/caption/workflow). The
+host-level `profile` verb and the leading global flags `--home`/`--profile`
+(also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
+from `commands --json` — like the launcher's install/update, they're CLI/host
+concerns, not video operations.
 
 **Pre-0.3.0 binaries open an interactive TUI on `--version --json`** instead
 of printing JSON. Any script invoking the binary must redirect `</dev/null`
@@ -151,9 +155,9 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.2 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0, 0.3.1, and 0.3.2, with `manifest.json` + `.sha256` sidecars;
-  `channels.stable` = 0.3.2); all smoke legs are required.
+- The live CDN serves 0.3.3 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0, 0.3.1, 0.3.2, and 0.3.3, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.3); all smoke legs are required.
 - `publish-npm.yml` (tag `v*`): asserts tag == package.json version → gates
   on `generate-manifest.mjs --check` against the live CDN → publishes via
   npm trusted publishing (OIDC, `id-token: write`, npm ≥ 11.5.1 — no token

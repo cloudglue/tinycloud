@@ -95,9 +95,57 @@ binary reports in `--version --json`.
 | `CLOUDGLUE_API_KEY` | Cloudglue API key (alternative to `tinycloud setup cloudglue`) |
 | `TINYCLOUD_VERSION` | npm launcher: run a specific binary version |
 | `TINYCLOUD_INSTALL_DIR` | npm launcher: cache root (default `~/.tinycloud`) |
+| `TINYCLOUD_HOME` | Isolated state home — config, sessions, cache, jobs, artifacts, skills (default `~/.tinycloud`; same as `--home`). 0.3.3+ |
+| `TINYCLOUD_OUT` | Output base for generated files (wins over a config `outputBase`) |
 | `TINYCLOUD_HTTP_TIMEOUT_MS` | Hard deadline per Cloudglue request (default 120s; `0` disables) |
 | `TINYCLOUD_UPLOAD_TIMEOUT_MS` | Deadline for upload-shaped requests (default 60min; `0` disables) |
 
 Every Cloudglue request carries a hard deadline, so a stalled route can never
 hang the CLI indefinitely; a timeout surfaces as a retryable `upstream` error
 envelope whose message names the knob to adjust.
+
+## Profiles & isolated homes (0.3.3+)
+
+Every piece of tinycloud state — config, sessions, cache, jobs, artifacts, and
+skills — lives under one home (default `~/.tinycloud`). Relocate it to run
+multiple accounts or installs side by side without cross-contamination. Both
+options are *leading* (before the verb) and work with any command:
+
+- `--home <dir>` (or `$TINYCLOUD_HOME`) — use that directory as the home.
+- `--profile <name>` — use a named profile's home (from the profiles registry).
+
+Named profiles are managed by the host-level `profile` verb (a CLI/host
+concern, so it is not in `commands --json`):
+
+```bash
+tinycloud profile list                     # profiles and their homes (active marked *)
+tinycloud profile show [<name>]            # home path + exists/default/active
+tinycloud profile create <name> [--home <dir>] [--copy-from <name>] \
+                                 [--description <text>] [--default]
+tinycloud profile use <name>               # set the default profile
+tinycloud profile remove <name>            # unregister (does not delete the home)
+```
+
+`--copy-from` seeds the new profile's home from an existing one. The registry
+lives at `$XDG_CONFIG_HOME/tinycloud/profiles.json`; `default` is reserved.
+This global `--profile <name>` is unrelated to `watch --profile
+default|light|custom` (that flag selects an analysis profile).
+
+## Project scope (0.3.3+)
+
+Within a home, sessions are scoped per project — keyed by the canonical git
+root — under `<home>/projects/<project-key>/sessions`. In the interactive
+agent, `/sessions` lists the current project's sessions (`/sessions all` spans
+every project); `-c` resumes the most recent and still falls back to legacy
+flat sessions (read-only, migrated forward on resume).
+
+A project can also carry a local `.tinycloud/config.json` that scopes a run:
+
+- `preferences.tools` / `preferences.skills` — allowlists of agent tool / skill
+  names (omit = all; the `--tools` / `--skills` flags override them).
+- `preferences.outputBase` — where generated files land (a relative path is
+  anchored to the project root; `$TINYCLOUD_OUT` still wins).
+
+Precedence is **CLI flags > project-local `.tinycloud/config.json` > global
+config**; a more specific scope replaces (does not merge) a broader one.
+Read-only mode always keeps the `read` and `bash` tools.
