@@ -75,6 +75,9 @@ Report what's now working and point forward:
   uses the API key)
 - One-command workflows: `tinycloud workflow list --json` (sales-coaching,
   blog-post, ad-analysis, meeting-breakdown, youtube-publish, …)
+- Multiple accounts or isolated installs (0.3.3+): `tinycloud profile create
+  <name> --default`, then `--profile <name>` (or `--home <dir>` /
+  `$TINYCLOUD_HOME`) on any command to switch state homes
 - If the general `tinycloud` skill is installed alongside this one, it
   documents the full CLI, envelope contract, and a glossary; its
   `scripts/preflight.sh` re-checks this setup any time.

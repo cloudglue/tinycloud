@@ -16,11 +16,11 @@ The npm package is a small launcher: on first run it downloads the matching
 platform distribution from Cloudglue's CDN (cached under
 `~/.tinycloud/versions/<version>/`), verifies its checksum, and execs the real
 binary. The package version pins the binary version, so
-`npx @cloudglue/tinycloud@0.3.0` always runs tinycloud 0.3.0. It also adds two
+`npx @cloudglue/tinycloud@0.3.3` always runs tinycloud 0.3.3. It also adds two
 wrapper commands:
 
 ```bash
-tinycloud install --version 0.3.0   # pre-download a version
+tinycloud install --version 0.3.3   # pre-download a version
 tinycloud install --latest          # install latest stable and pin to it
 tinycloud update                    # move to latest stable, prune old versions
 ```
@@ -150,6 +150,30 @@ every command and flag. Full per-verb flags and cost classes:
 The envelope contract — statuses (`ready`, `pending`, `needs_credentials`, …)
 and exit codes:
 [skills/tinycloud/reference/envelope.md](skills/tinycloud/reference/envelope.md).
+
+### Global flags & profiles (0.3.3+)
+
+A few options are host-level — they isolate state rather than run a video
+operation, so they go *before* the verb and don't appear in `commands --json`:
+
+- `--home <dir>` (or `$TINYCLOUD_HOME`) — run against an isolated state home
+  (config, sessions, cache, jobs, artifacts, skills) instead of `~/.tinycloud`.
+- `--profile <name>` — use a named profile's home, so multiple accounts or
+  installs run side by side without cross-contamination.
+
+```bash
+tinycloud --home ./.tc watch ./demo.mp4 --json      # isolated state for this repo
+tinycloud profile list                              # profiles and their homes
+tinycloud profile create work --default             # create one and make it default
+tinycloud profile create staging --copy-from work   # clone an existing home
+tinycloud --profile work ask "..." --in ./demo.mp4 --json
+```
+
+Sessions are scoped per project (keyed by the git root), the agent takes a
+`--skills <list>` allowlist alongside `--tools`, and a project-local
+`.tinycloud/config.json` can pin tool/skill allowlists and an output base.
+Details:
+[skills/tinycloud/reference/setup.md](skills/tinycloud/reference/setup.md).
 
 ## Workflows
 

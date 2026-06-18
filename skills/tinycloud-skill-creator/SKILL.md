@@ -44,6 +44,8 @@ Before writing anything, establish:
     `.claude/skills/<name>/`) whose SKILL.md runs the recipe **by path**.
   - *The tinycloud agent*: `~/.tinycloud/skills/<name>/` (global) or
     `.tinycloud/skills/<name>/` (project), picked up as `/skills:<name>`.
+    (With `--home`/`--profile`, 0.3.3+, the global dir is the active home's
+    `skills/`; a project's `.tinycloud/config.json` can allowlist skills.)
 
 ## 2. Scaffold
 

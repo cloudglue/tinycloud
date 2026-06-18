@@ -2,7 +2,7 @@
   "name": "tinycloud",
   "displayName": "Tinycloud Video",
   "description": "Video understanding and editing via the tinycloud CLI (Cloudglue): watch/extract/search/ask over videos, captions, clips, and one-command video workflows.",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "author": { "name": "Cloudglue", "url": "https://cloudglue.dev" },
   "homepage": "https://tinycloud.sh",
   "repository": "https://github.com/cloudglue/tinycloud",

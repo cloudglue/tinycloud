@@ -141,5 +141,9 @@ are not implemented in 0.3.x — treat `partial`/`paused` as terminal.
 The tinycloud agent picks it up on next start; from any shell it runs by
 path: `tinycloud workflow run ~/.tinycloud/skills/my-skill/my-skill.yaml demo.mp4 --allow-command --json`.
 
+With `--home`/`--profile` (0.3.3+) the global skills dir moves under the active
+home (`<home>/skills/`); a project-local `.tinycloud/config.json` can also pin
+which skills load via a `preferences.skills` allowlist.
+
 To wrap a recipe as a skill for *this* host agent instead, see the
 `tinycloud-skill-creator` skill in this repo.
