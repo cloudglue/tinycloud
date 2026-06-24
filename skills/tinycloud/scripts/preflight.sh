@@ -9,11 +9,11 @@ set -u
 
 # Mirror tinycloud-skill.json: min_version / supported_range upper bound
 # (CI diffs these against the manifest).
-MIN_VERSION="0.3.2"
+MIN_VERSION="0.3.4"
 MAX_VERSION_EXCLUSIVE="0.4.0"
 INSTALL_CMD='curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash'
 # Kept in sync with ../tinycloud-skill.json required_features (CI diffs them).
-REQUIRED_FEATURES="envelope.v1 watch.v1 extract.v1 caption.v1 search.v1 probe.v1 ask.v1 clip.v1 grab.v1 jobs.v1 library.collections.v1 library.sync.url.v1 workflow.v1 publish.v1 publish.manage.v1 publish.video.v1 setup.v1"
+REQUIRED_FEATURES="envelope.v1 watch.v1 extract.v1 caption.v1 search.v1 probe.v1 ask.v1 clip.v1 grab.v1 face.v1 jobs.v1 library.collections.v1 library.collections.create.v1 library.collections.mutate.v1 library.collections.entities.v1 library.sync.url.v1 workflow.v1 publish.v1 publish.manage.v1 publish.video.v1 setup.v1"
 
 # 1) Binary present and responsive?
 if ! command -v tinycloud >/dev/null 2>&1; then

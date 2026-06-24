@@ -24,12 +24,14 @@ connector?" or an envelope field needs explaining.
 - **Collection** — a named group of Cloudglue files (id `col_…`), e.g. "all
   sales calls". Verbs scope to one with `--in collection:col_…`. Collection
   ids are stable; display names are not. A collection has a type that decides
-  which verbs can read it: `media-descriptions` (the default) backs
-  `ask`/`probe`/`search`, and `face-analysis` backs `face list`/`face search`
-  (`entities`/`rich-transcripts` also exist). Manage them with
-  `library collections create|add|remove|delete` (0.3.4+); `add` enriches each
-  file asynchronously, so a query right after `add` may return empty until it
-  finishes.
+  which verb reads it: `media-descriptions` (default) backs `ask`/`probe`/`search`,
+  `face-analysis` backs `face list`/`face search`, and `entities` (created with
+  `--prompt`/`--schema`) backs `library collections entities` (`rich-transcripts`
+  also exists). Manage them with `library collections create|add|remove|delete`
+  (0.3.4+); every type follows `create → add → poll show → query → delete`. `add`
+  enriches each file asynchronously and returns `pending` — poll
+  `library collections show <col>` until every `files[].status` is `completed`
+  before querying.
 - **Data connector** — a linked external source of recordings (Zoom, Grain,
   Google Drive, Dropbox, Loom, S3/GCS). `tinycloud library connectors …`
   lists, browses (`files`, with provider-specific filters), and syncs

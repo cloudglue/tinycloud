@@ -89,22 +89,26 @@ tinycloud clip cut ./demo.mp4 --start 12 --end 28 -o ./tinycloud-output/clip.mp4
 tinycloud clip thumbs ./demo.mp4 --interval 5 -o ./tinycloud-output/thumbs/ --json
 tinycloud clip burn ./demo.mp4 --subtitle-file ./captions/demo.srt -o ./out.mp4 --json
 
-# Faces: detect, or match/search a known face (cloud, 0.3.4+)
+# Faces on a single video (cloud, 0.3.4+) — for collection-scale face search/list, see Collections below
 tinycloud face detect ./demo.mp4 --json                       # every face → normalized box + timestamp
 tinycloud face match ./person.jpg ./demo.mp4 --max-faces 10 --json   # query image, ranked 0–100 similarity
-tinycloud face search ./person.jpg --in collection:col_123 --json    # query face across a face-analysis collection
 
-# Remote videos, collections, async jobs
+# Remote videos, async jobs
 tinycloud grab https://youtu.be/<id> -o ./tinycloud-output/grabbed/ --json
 tinycloud library connectors sync https://example.com/clip.mp4 --json  # public URL → Cloudglue file (not YouTube — use grab)
-tinycloud library collections list --json
-tinycloud library collections create faces --type face-analysis --json   # collection write (0.3.4+)
-tinycloud library collections add ./demo.mp4 --to col_123 --json         # uploads a local source first
-tinycloud face list ./demo.mp4 --in collection:col_123 --json            # stored detections for a video in a collection
-tinycloud library collections remove cloudglue://files/<id> --from col_123 --json
-tinycloud library collections delete col_123 --json
 tinycloud watch ./long.mp4 --background --json   # returns pending + meta.job_id
 tinycloud jobs wait <job-id> --timeout 120s --json
+
+# Collections (0.3.4+) — reusable, library-scale. Lifecycle: create → add → poll show → query → delete.
+tinycloud library collections list --json
+tinycloud library collections create faces --type face-analysis --json   # or media-descriptions / entities (--prompt) / rich-transcripts
+tinycloud library collections add ./demo.mp4 --to col_123 --json         # uploads a local source first; enrichment is async (pending)
+tinycloud library collections show col_123 --json                        # poll files[].status until completed, then query:
+tinycloud face search ./person.jpg --in collection:col_123 --json        # face-analysis → face list/search
+tinycloud ask "what's discussed?" --in collection:col_123 --json         # media-descriptions → ask/probe/search
+tinycloud library collections entities col_123 ./demo.mp4 --json         # entities → structured entities for a video
+tinycloud library collections remove cloudglue://files/<id> --from col_123 --json
+tinycloud library collections delete col_123 --json
 
 # Publish an HTML artifact to Cloudglue Sites (manage with list / unpublish)
 tinycloud publish ./tinycloud-output/html/report.html --name report --visibility private --json

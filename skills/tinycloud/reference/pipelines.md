@@ -92,27 +92,34 @@ tinycloud clip burn ./demo.mp4 \
 tinycloud grab https://youtu.be/<id> -o ./tinycloud-output/grabbed/ --json
 tinycloud watch ./tinycloud-output/grabbed/<file>.mp4 --json
 
-# Build a queryable collection from your own videos, then ask/probe across it (0.3.4+)
-tinycloud library collections create "sales-calls" --type media-descriptions --json  # default type; ask/probe/search read it
-tinycloud library collections add ./call-1.mp4 --to col_123 --json   # uploads first; enrichment is async → status: pending
-tinycloud library collections add ./call-2.mp4 --to col_123 --json
-# `add` returns pending — the collection enriches each file in the background. A query
-# before that finishes returns error/empty, so poll until ready (re-run the query, or
-# watch the file via `library collections show`), then:
+# Collections (0.3.4+) all follow one lifecycle — create → add → poll show → query → delete.
+# `add` enriches each file asynchronously and returns pending; poll `collections show`
+# and wait until every files[].status is `completed` before querying.
+
+# media-descriptions (default) → ask / probe / search
+tinycloud library collections create "sales-calls" --type media-descriptions --json
+tinycloud library collections add ./call-1.mp4 --to col_123 --json        # → pending
+tinycloud library collections show col_123 --json                          # poll files[].status → completed
 tinycloud probe "pricing objections" --in collection:col_123 --scope segment --json
 tinycloud ask "What did customers object to across these calls?" --in collection:col_123 --json
+tinycloud library collections delete col_123 --json
 
-# Already-built collection: mirror artifacts locally, then search/Q&A against it
-tinycloud library collections sync col_123 --artifacts descriptions,transcripts --json
-tinycloud probe "pricing discussion" --in collection:col_123 --scope segment --json
-tinycloud ask "What did customers object to?" --in collection:col_123 --json
-
-# Faces at collection scale (0.3.4+): build a face-analysis collection, then search a face across it
-tinycloud library collections create faces --type face-analysis --json   # returns the new col_… id in data
-tinycloud library collections add ./interview.mp4 --to col_123 --json    # uploads first; face analysis runs async (pending)
-# Same as above: face list/search return error until the collection finishes detecting — poll/retry, then:
-tinycloud face list ./interview.mp4 --in collection:col_123 --json       # stored detections for that video
+# face-analysis → face list / face search
+tinycloud library collections create faces --type face-analysis --json
+tinycloud library collections add ./interview.mp4 --to col_123 --json     # → pending
+tinycloud library collections show col_123 --json                          # poll files[].status → completed
+tinycloud face list ./interview.mp4 --in collection:col_123 --json         # stored detections for that video
 tinycloud face search ./headshot.jpg --in collection:col_123 --group-by file --json
+
+# entities (create needs --prompt or --schema) → library collections entities
+tinycloud library collections create ents --type entities --prompt "people, places, objects" --json
+tinycloud library collections add ./interview.mp4 --to col_123 --json     # → pending
+tinycloud library collections show col_123 --json                          # poll files[].status → completed
+tinycloud library collections entities col_123 ./interview.mp4 --json      # structured entities (video + segment level)
+
+# Already-built collection: mirror description/transcript artifacts locally for free `search`
+tinycloud library collections sync col_123 --artifacts descriptions,transcripts --json
+tinycloud search "discount" --in collection:col_123 --json
 
 # Extract timestamped findings → cut them into clips
 tinycloud watch ./talk.mp4 --json \

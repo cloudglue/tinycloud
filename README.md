@@ -124,7 +124,7 @@ go to stderr) — pass `--json`.
 | `clip` | ffmpeg-backed cut, thumbs, stitch, transcode, burn, split, audio, info |
 | `grab` | Download a remote video (YouTube, TikTok, Loom, direct) |
 | `face` | Detect faces in a video, or match/search a known face, ranked by similarity |
-| `library` | Browse, sync, and manage (create/add/remove/delete) Cloudglue collections and connectors |
+| `library` | Build & manage Cloudglue collections (create/add/show/remove/delete) and connectors |
 | `jobs` | Poll, wait on, or forget async jobs |
 | `workflow` | Run packaged pipeline recipes (see below) |
 | `publish` | Publish HTML artifacts as Cloudglue Sites; share videos |
@@ -146,6 +146,22 @@ tinycloud ask "What objections came up?" --in ./demo.mp4 --json
 # Detect faces, or match a known face against a video (0.3.4+)
 tinycloud face match ./person.jpg ./demo.mp4 --max-faces 10 --json
 ```
+
+**Collections (0.3.4+)** turn a set of videos into a reusable, queryable
+knowledge base. Build one and query it — every type follows the same
+`create → add → poll show → query → delete` shape, differing only in `--type`
+and the verb that reads it:
+
+```bash
+tinycloud library collections create "calls" --type media-descriptions --json
+tinycloud library collections add ./call.mp4 --to col_123 --json   # enrichment is async
+tinycloud library collections show col_123 --json                  # poll files[].status → completed
+tinycloud ask "What did customers object to?" --in collection:col_123 --json
+```
+
+`media-descriptions` backs `ask`/`probe`/`search`, `face-analysis` backs
+`face list`/`face search`, and `entities` (created with `--prompt`/`--schema`)
+backs `library collections entities`.
 
 `tinycloud commands --json` is the authoritative, machine-readable list of
 every command and flag. Full per-verb flags and cost classes:
