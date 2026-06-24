@@ -187,6 +187,13 @@ decides which verbs read it: `media-descriptions` (default) feeds
 enriches each file asynchronously and returns `pending`, so a query right after
 `add` can come back empty/error until processing finishes — poll and retry.
 
+`create` handles `media-descriptions`, `rich-transcripts`, and `face-analysis`
+directly. `--type entities` additionally needs an extraction prompt/schema that
+0.3.4's `create` doesn't accept (it errors `At least one of prompt or schema
+must be provided`); for entity pull, use the `extract` verb per video — a
+free-form query or `--schema` returns structured `entities` (people, places,
+objects, …) with timestamps.
+
 `connectors sync` materializes its argument into a Cloudglue file without
 starting analysis (idempotent). The connector id is optional — with just a
 URI or link, sync routes through the matching connector type. Connector URIs
