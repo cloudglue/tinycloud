@@ -25,7 +25,8 @@ supported — use WSL2. More at https://tinycloud.sh.
 
 ## Credentials
 
-Cloud verbs (`watch extract probe ask publish`) need a Cloudglue API key.
+Cloud verbs (`watch extract probe ask publish face`) need a Cloudglue API key
+(as do `library collections add` and the collection reads).
 Usage is billed to that key per the
 [rate card](https://app.cloudglue.dev/home/billing/rate-card).
 

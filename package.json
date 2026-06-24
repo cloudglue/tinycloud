@@ -1,6 +1,6 @@
 {
   "name": "@cloudglue/tinycloud",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Agent CLI for deep video work, by Cloudglue. Downloads the tinycloud binary on first run.",
   "bin": {
     "tinycloud": "bin/tinycloud.js"
@@ -23,6 +23,6 @@
     "url": "git+https://github.com/cloudglue/tinycloud.git"
   },
   "homepage": "https://tinycloud.sh",
-  "keywords": ["video", "cloudglue", "cli", "agent", "captions", "clips"],
+  "keywords": ["video", "cloudglue", "cli", "agent", "captions", "clips", "face-detection"],
   "license": "SEE LICENSE IN LICENSE.md"
 }

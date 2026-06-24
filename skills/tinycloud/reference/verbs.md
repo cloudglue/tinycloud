@@ -14,7 +14,8 @@ every verb. Regenerate doubts from it instead of trusting prose.
 | `ask` | cloud | yes | Grounded Q&A over one or more videos |
 | `clip` | local | no | Cuts, thumbs, audio, stitch, split, transcode, burn, explore |
 | `grab` | network | no | Download a remote video (YouTube, TikTok, Loom, direct) |
-| `library` | varies | no | Collections, connectors, local mirrors, sync |
+| `face` | cloud | yes | Detect faces in a video, or match/search a query face (0.3.4+) |
+| `library` | varies | no | Collections (incl. create/add/remove/delete), connectors, mirrors, sync |
 | `jobs` | network | yes | Poll/wait/forget tracked async jobs |
 | `workflow` | varies | no | Validate/plan/run workflow recipes |
 | `publish` | cloud | yes | Publish HTML/code artifacts as Cloudglue Sites; share videos |
@@ -126,16 +127,83 @@ tinycloud clip cut --from-findings -o clips/        # cut timestamped findings p
 tinycloud grab <url> [-o <file-or-dir>] [--audio-only] [--format <yt-dlp-selector>]
 ```
 
+### face — detect & match faces (cloud, 0.3.4+)
+
+```bash
+tinycloud face detect <source> [--fps <n>] [--start <t>] [--end <t>]
+  [--thumbnails] [--limit <n>] --json
+tinycloud face match <image> <source> [--max-faces <n>] [--min-similarity <0-100>]
+  [--fps <n>] [--start <t>] [--end <t>] [--thumbnails] --json
+tinycloud face list <source> --in collection:col_… [--limit <n>] [--offset <n>] --json
+tinycloud face search <image> --in collection:col_… [col_…]
+  [--min-score <n>] [--group-by file] [--limit <n>] --json
+```
+
+`detect` runs Cloudglue face detection over a video and returns every face as
+a normalized 0–1 bounding box (`{top,left,width,height}`) plus a timestamp.
+`match` takes a query image — a local file (downscaled and sent inline, **never
+uploaded**) or an http(s) URL — and returns the closest faces ranked by a 0–100
+`similarity`. Both upload the *video* first like `watch`/`extract`
+(`needs_upload` without `--no-upload`) and cache by source + options, so re-runs
+are free. `--fps`/`--start`/`--end` tune sampling and window;
+`--max-faces`/`--min-similarity` bound `match`, `--limit` bounds `detect`,
+`--thumbnails` adds per-face frame URLs.
+
+`list` and `search` operate over a **face-analysis collection** (create one with
+`library collections create --type face-analysis` and add videos with
+`library collections add`): `list` reads a video's stored detections; `search`
+finds the query face across one or more collections (`--min-score`,
+`--group-by file`). `total` reports the server-available count across all modes
+(never rewritten by client `--min-*`/`--limit` filters).
+
 ### library — collections and connectors
 
 ```bash
 tinycloud library collections list --json
-tinycloud library collections show <col_id> --json
+tinycloud library collections show <col_id> --json     # files[].status: pending|processing|completed (readiness)
 tinycloud library collections sync <col_id> --artifacts descriptions,transcripts,thumbnails,metadata --json
+# Collection writes (0.3.4+) — the only write paths in library:
+tinycloud library collections create <name> [--type media-descriptions|entities|rich-transcripts|face-analysis] [--description <text>] [--prompt <text> | --schema <file>] --json
+tinycloud library collections add <source> --to <col_id> [--no-upload] [--no-download] --json
+tinycloud library collections remove <source> --from <col_id> --json
+tinycloud library collections delete <col_id> --json
+tinycloud library collections entities <col_id> <source> [--limit <n>] [--offset <n>] --json   # read a video's entities
 tinycloud library connectors list --json
 tinycloud library connectors files <connector-id> [--limit 25] [--page-token <t>] --json
 tinycloud library connectors sync [<connector-id>] <uri-share-link-or-public-url> --json
 ```
+
+`collections create|add|remove|delete` are the only writes in an otherwise
+read-only `library` (gated by the `library.collections.create.v1` /
+`library.collections.mutate.v1` feature ids). `create` defaults to
+`--type media-descriptions`; an `entities` collection also needs an extraction
+spec — `--prompt <text>` or `--schema <file.json>` — or `create` errors. `add`
+(`--to <col>`, or `--collection`) resolves the source like `watch`/`extract` —
+a local file uploads first (or `needs_upload` with `--no-upload`) — and records
+the file→collection mapping; `remove` (`--from <col>`) takes a Cloudglue file
+id/uri; `delete` removes the whole collection (and cleans the local mirror).
+Collection ids accept a bare uuid, a `col_…` slug, or `collection:<id>` /
+`cloudglue://collections/<id>` forms, consistently across read and write paths.
+
+**Readiness — always poll before querying.** `add` enriches each file
+asynchronously and returns `pending`. Poll `collections show <col> --json` and
+wait until every `files[].status` is `completed` (`pending → processing →
+completed`; `failed` is terminal) — a query before then returns empty or errors.
+
+The collection's `--type` decides which verb reads it (every type follows the
+same `create → add → poll show → query → delete` lifecycle):
+
+| `--type` | read with |
+|---|---|
+| `media-descriptions` (default) | `ask` / `probe` / `search` (`--in collection:<col>`) |
+| `face-analysis` | `face list` / `face search` |
+| `entities` (needs `--prompt`/`--schema`) | `library collections entities <col> <source>` |
+| `rich-transcripts` | `collections sync --artifacts transcripts` |
+
+`collections entities <col> <source>` returns a video's extracted entities
+(video- and segment-level, `--limit`/`--offset`) from an `entities` collection.
+For a one-off per-video pull without standing up a collection, `extract` returns
+entities/facts directly (free-form query or `--schema`).
 
 `connectors sync` materializes its argument into a Cloudglue file without
 starting analysis (idempotent). The connector id is optional — with just a
@@ -275,11 +343,16 @@ Output: `--json` (force JSONL envelopes), `--pretty` (one JSON array),
 `--data raw`, `--raw-output` (raw backend payload; disables pipe protocol),
 `--quiet`, `--verbose`.
 
-Cache/spend — on `watch`, `extract`, `caption`, and `workflow` only:
+Cache — on `watch`, `extract`, `caption`, `face`, and `workflow` only:
 `--refresh` (recompute), `--no-cache` (no persistence), `--cached` (reuse
-exact-match history), `--no-upload` (refuse cloud upload → `needs_upload`),
-`--no-download` (refuse local materialization → `needs_download`).
-`ask`/`probe` always call the cloud; use `search` for a free cached lookup.
+exact-match history). `ask`/`probe` always call the cloud; use `search` for a
+free cached lookup.
+
+Upload/download refusal — on every verb that resolves a source:
+`--no-upload` (refuse cloud upload → `needs_upload`) on `watch`/`extract`/
+`caption`/`face`/`workflow`/`publish` and `library collections add`;
+`--no-download` (refuse local materialization → `needs_download`) on the same
+set minus `publish`.
 
 Source reuse (`watch`/`extract`/`caption`): `--source-id <id>`, `--result-id <id>`.
 
