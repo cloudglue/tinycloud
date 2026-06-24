@@ -181,7 +181,11 @@ the source like `watch`/`extract` — a local file uploads first (or
 `remove` (`--from <col>`) takes a Cloudglue file id/uri; `delete` removes the
 whole collection (and cleans the local mirror). Collection ids accept a bare
 uuid, a `col_…` slug, or `collection:<id>` / `cloudglue://collections/<id>`
-forms, consistently across read and write paths.
+forms, consistently across read and write paths. The collection's `--type`
+decides which verbs read it: `media-descriptions` (default) feeds
+`ask`/`probe`/`search`, `face-analysis` feeds `face list`/`face search`. `add`
+enriches each file asynchronously and returns `pending`, so a query right after
+`add` can come back empty/error until processing finishes — poll and retry.
 
 `connectors sync` materializes its argument into a Cloudglue file without
 starting analysis (idempotent). The connector id is optional — with just a
