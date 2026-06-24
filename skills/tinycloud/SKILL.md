@@ -61,8 +61,8 @@ Full schema and error codes: [reference/envelope.md](reference/envelope.md).
 
 ## 2. Core verbs (cheat sheet)
 
-Cloud verbs (`watch extract probe ask publish`) call the Cloudglue API using
-the configured key — usage is billed per the
+Cloud verbs (`watch extract probe ask publish face`) call the Cloudglue API
+using the configured key — usage is billed per the
 [rate card](https://app.cloudglue.dev/home/billing/rate-card). `search clip
 setup` are local and free; `grab jobs` are network-only.
 `tinycloud commands --json` is the authoritative command/flag list.
@@ -89,10 +89,20 @@ tinycloud clip cut ./demo.mp4 --start 12 --end 28 -o ./tinycloud-output/clip.mp4
 tinycloud clip thumbs ./demo.mp4 --interval 5 -o ./tinycloud-output/thumbs/ --json
 tinycloud clip burn ./demo.mp4 --subtitle-file ./captions/demo.srt -o ./out.mp4 --json
 
+# Faces: detect, or match/search a known face (cloud, 0.3.4+)
+tinycloud face detect ./demo.mp4 --json                       # every face → normalized box + timestamp
+tinycloud face match ./person.jpg ./demo.mp4 --max-faces 10 --json   # query image, ranked 0–100 similarity
+tinycloud face search ./person.jpg --in collection:col_123 --json    # query face across a face-analysis collection
+
 # Remote videos, collections, async jobs
 tinycloud grab https://youtu.be/<id> -o ./tinycloud-output/grabbed/ --json
 tinycloud library connectors sync https://example.com/clip.mp4 --json  # public URL → Cloudglue file (not YouTube — use grab)
 tinycloud library collections list --json
+tinycloud library collections create faces --type face-analysis --json   # collection write (0.3.4+)
+tinycloud library collections add ./demo.mp4 --to col_123 --json         # uploads a local source first
+tinycloud face list ./demo.mp4 --in collection:col_123 --json            # stored detections for a video in a collection
+tinycloud library collections remove cloudglue://files/<id> --from col_123 --json
+tinycloud library collections delete col_123 --json
 tinycloud watch ./long.mp4 --background --json   # returns pending + meta.job_id
 tinycloud jobs wait <job-id> --timeout 120s --json
 

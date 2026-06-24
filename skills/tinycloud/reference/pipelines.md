@@ -97,6 +97,12 @@ tinycloud library collections sync col_123 --artifacts descriptions,transcripts 
 tinycloud probe "pricing discussion" --in collection:col_123 --scope segment --json
 tinycloud ask "What did customers object to?" --in collection:col_123 --json
 
+# Faces at collection scale (0.3.4+): build a face-analysis collection, then search a face across it
+tinycloud library collections create faces --type face-analysis --json   # returns the new col_… id in data
+tinycloud library collections add ./interview.mp4 --to col_123 --json    # uploads a local source first
+tinycloud face list ./interview.mp4 --in collection:col_123 --json       # stored detections for that video
+tinycloud face search ./headshot.jpg --in collection:col_123 --group-by file --json
+
 # Extract timestamped findings → cut them into clips
 tinycloud watch ./talk.mp4 --json \
   | tinycloud extract "the three strongest quotes with timestamps" --json \

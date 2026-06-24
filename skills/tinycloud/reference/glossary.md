@@ -23,7 +23,10 @@ connector?" or an envelope field needs explaining.
   reuse the file.
 - **Collection** — a named group of Cloudglue files (id `col_…`), e.g. "all
   sales calls". Verbs scope to one with `--in collection:col_…`. Collection
-  ids are stable; display names are not.
+  ids are stable; display names are not. A collection has a type
+  (`media-descriptions` | `entities` | `rich-transcripts` | `face-analysis`);
+  `face list`/`face search` need a `face-analysis` collection. Manage them with
+  `library collections create|add|remove|delete` (0.3.4+).
 - **Data connector** — a linked external source of recordings (Zoom, Grain,
   Google Drive, Dropbox, Loom, S3/GCS). `tinycloud library connectors …`
   lists, browses (`files`, with provider-specific filters), and syncs
