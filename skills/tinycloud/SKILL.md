@@ -99,16 +99,18 @@ tinycloud library connectors sync https://example.com/clip.mp4 --json  # public 
 tinycloud watch ./long.mp4 --background --json   # returns pending + meta.job_id
 tinycloud jobs wait <job-id> --timeout 120s --json
 
-# Collections (0.3.4+) — reusable, library-scale. Lifecycle: create → add → poll show → query → delete.
+# Collections (0.3.4+) — turn videos into a reusable, queryable knowledge base.
+# Lifecycle (every --type): create → add → poll show → query → delete.
 tinycloud library collections list --json
-tinycloud library collections create faces --type face-analysis --json   # or media-descriptions / entities (--prompt) / rich-transcripts
-tinycloud library collections add ./demo.mp4 --to col_123 --json         # uploads a local source first; enrichment is async (pending)
-tinycloud library collections show col_123 --json                        # poll files[].status until completed, then query:
-tinycloud face search ./person.jpg --in collection:col_123 --json        # face-analysis → face list/search
-tinycloud ask "what's discussed?" --in collection:col_123 --json         # media-descriptions → ask/probe/search
-tinycloud library collections entities col_123 ./demo.mp4 --json         # entities → structured entities for a video
-tinycloud library collections remove cloudglue://files/<id> --from col_123 --json
-tinycloud library collections delete col_123 --json
+tinycloud library collections create my-desc --type media-descriptions --json  # types: media-descriptions | face-analysis | entities (--prompt) | rich-transcripts
+tinycloud library collections add ./demo.mp4 --to col_desc --json              # uploads a local source first; enrichment is async (pending)
+tinycloud library collections show col_desc --json                            # poll files[].status until completed, then query —
+# the collection's --type decides the read verb (each line below is a DIFFERENT, matching-type collection):
+tinycloud ask "what's discussed?" --in collection:col_desc --json             #   media-descriptions → ask / probe / search
+tinycloud face search ./person.jpg --in collection:col_faces --json           #   face-analysis      → face list / face search
+tinycloud library collections entities col_ents ./demo.mp4 --json             #   entities           → collections entities
+tinycloud library collections remove cloudglue://files/<id> --from col_desc --json
+tinycloud library collections delete col_desc --json
 
 # Publish an HTML artifact to Cloudglue Sites (manage with list / unpublish)
 tinycloud publish ./tinycloud-output/html/report.html --name report --visibility private --json

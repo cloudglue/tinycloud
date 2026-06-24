@@ -124,7 +124,7 @@ go to stderr) — pass `--json`.
 | `clip` | ffmpeg-backed cut, thumbs, stitch, transcode, burn, split, audio, info |
 | `grab` | Download a remote video (YouTube, TikTok, Loom, direct) |
 | `face` | Detect faces in a video, or match/search a known face, ranked by similarity |
-| `library` | Build & manage Cloudglue collections (create/add/show/remove/delete) and connectors |
+| `library` | Build & query Cloudglue collections (create/add/remove/delete) and browse connectors |
 | `jobs` | Poll, wait on, or forget async jobs |
 | `workflow` | Run packaged pipeline recipes (see below) |
 | `publish` | Publish HTML artifacts as Cloudglue Sites; share videos |
