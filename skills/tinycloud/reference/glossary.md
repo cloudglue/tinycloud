@@ -88,11 +88,15 @@ connector?" or an envelope field needs explaining.
   `publish unpublish <site-id | site-name | label>`.
 - **Video share (shareable asset)** — `tinycloud publish video <source>`
   wraps a Cloudglue file in a hosted share page (`data.share.share_url`) plus
-  an HLS stream; one active share per (file, visibility). Private shares
+  an HLS stream; one active share per (file, visibility). Adding
+  `--clip-start`/`--clip-end` (seconds, 0.3.5+) also returns `data.moment_url`,
+  the share page bounded to that "back to moment" window (also reachable as
+  `?s=<start>&e=<end>` on a `share_url`). Private shares
   embed via the `data.embed_snippet` `<cg-video>` tag, which only plays on a
   private published site of the same account. The embed has playback
   attributes (`autoplay`+`muted`, `loop`, `start-time`, `poster`,
-  `accent-color`, `exclusive`) and a JS API (`playSegment`, `seekTo`, media
+  `accent-color`, `exclusive`, and `clip-start`/`clip-end` to frame a single
+  "back to moment" clip) and a JS API (`playSegment`, `seekTo`, media
   events re-dispatched on the element) for custom site HTML, and plays
   standalone or inside the container components (`<cg-playlist>`,
   `<cg-grid>`, `<cg-chapters>`) — see reference/verbs.md.

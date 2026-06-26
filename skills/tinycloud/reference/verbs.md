@@ -278,7 +278,7 @@ generated site name, or your `--name` label.
 
 ```bash
 tinycloud publish video <source> [--visibility public|private]   # default public
-  [--name <title>] [--segment-id <id>] --json
+  [--name <title>] [--segment-id <id>] [--clip-start <s> --clip-end <e>] --json
 tinycloud publish video list [--in <source>] [--visibility public|private] --json
 tinycloud publish video unpublish <share-id | source> --json   # --visibility disambiguates
 ```
@@ -297,6 +297,14 @@ feature id.
   `data.embed_snippet` (a `<cg-video share-id="...">` tag), which only plays
   on a PRIVATE published site of the same account — `tinycloud publish`
   rejects an artifact with a private embed targeted at a public site.
+- Moment window (0.3.5+): pass `--clip-start <s> --clip-end <e>` (seconds,
+  `clip-end > clip-start >= 0`, both required together or the command errors)
+  to also get `data.moment_url` — the hosted share page bounded to
+  `[start, end]`, with the same length badge, region strip, and "↺ Back to
+  moment" pill as the `<cg-video>` clip embed, and it survives the
+  private-share sign-in. Optional — omit it for a plain full-video share. The
+  same window is just `?s=<start>&e=<end>` appended to a `share_url`, so you
+  can hand-build a moment link from an existing share without re-publishing.
 
 When generating custom site HTML around a `<cg-video>` embed, use the
 component's built-ins instead of reinventing them. It defaults to a
@@ -308,6 +316,17 @@ rest). Its JS API queues until ready — `playSegment(start, end?)`,
 `seekTo()`, `play()`/`pause()` — and media events are re-dispatched on the
 element (`timeupdate`, `ended`, `cg-ready`); prefer `playSegment` over
 hand-rolled seek logic for "click a moment to play that segment" pages.
+
+To frame a single moment inside the full recording — a cited highlight you
+want to share on its own — add `clip-start`/`clip-end` (seconds) to a bare
+`<cg-video>`: the player draws a clip-length badge, a clip-region strip with a
+live playhead, snaps the first play to `clip-start`, and auto-pauses at
+`clip-end` (via `playSegment`). Scrubbing out of the window fades in a soft
+"↺ Back to moment" pill — a manual scrub-out is never forced back. Both are
+required and `clip-end` is ignored unless it is greater than `clip-start`; the
+pair is `<cg-video>`-only (not read on `<cg-playlist-item>`/`<cg-grid-item>`).
+Rule of thumb: one moment → `clip-start`/`clip-end` on a `<cg-video>`; several
+segments a viewer navigates between → `<cg-chapters>` (below).
 
 For multi-video or segment-navigation pages, prefer the container components
 over hand-rolled galleries and segment-list JS:

@@ -118,6 +118,8 @@ tinycloud publish list --json
 
 # Share a video itself (hosted share page + HLS stream, like a Loom link)
 tinycloud publish video ./demo.mp4 --visibility public --json
+# Share a single moment — also returns data.moment_url (0.3.5+)
+tinycloud publish video ./demo.mp4 --clip-start 18 --clip-end 33 --json
 ```
 
 Per-verb details and all flags: [reference/verbs.md](reference/verbs.md).
@@ -185,7 +187,8 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   are signed and short-lived (never hard-code them) — embed via
   `data.embed_snippet` (`<cg-video>`), which only plays on a private site of
   the same account. When writing HTML around an embed, use the component's
-  built-ins (`autoplay`+`muted`, `loop`, `start-time`, `exclusive`; JS
+  built-ins (`autoplay`+`muted`, `loop`, `start-time`, `exclusive`,
+  `clip-start`/`clip-end` to frame one "back to moment" clip; JS
   `playSegment(start, end?)`) and the container components
   (`<cg-playlist>`, `<cg-grid>`, `<cg-chapters>`) rather than hand-rolled
   players, galleries, or segment-list JS — details in

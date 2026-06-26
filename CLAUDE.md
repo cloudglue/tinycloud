@@ -28,16 +28,16 @@ node --test test/unit.test.mjs            # just the unit suite
 TINYCLOUD_TEST_TARBALL=~/Downloads/tinycloud-darwin-arm64.tar.gz npm test   # e2e against a real dist tarball
 
 # Contract smoke tests against an installed/extracted binary
-TINYCLOUD_CMD=/path/to/tinycloud EXPECTED_VERSION=0.3.4 bash scripts/smoke-test.sh
+TINYCLOUD_CMD=/path/to/tinycloud EXPECTED_VERSION=0.3.5 bash scripts/smoke-test.sh
 
 # Serve a tarball as a fake CDN (modes: --corrupt, --no-manifest)
-node test/fixtures/make-fixture-cdn.mjs --tarball <path>.tar.gz --version 0.3.4 --port 8787
+node test/fixtures/make-fixture-cdn.mjs --tarball <path>.tar.gz --version 0.3.5 --port 8787
 TINYCLOUD_DIST_URL=http://127.0.0.1:8787 TINYCLOUD_INSTALL_DIR=$(mktemp -d) node bin/tinycloud.js --version --json
 TINYCLOUD_DIST_URL=http://127.0.0.1:8787 bash install.sh --install-dir $(mktemp -d)/bin
 
 # Release manifest tooling (maintainer)
-node scripts/generate-manifest.mjs --version 0.3.4 --from-cdn   # build manifest + .sha256 sidecars
-node scripts/generate-manifest.mjs --check --version 0.3.4      # verify live CDN matches manifest
+node scripts/generate-manifest.mjs --version 0.3.5 --from-cdn   # build manifest + .sha256 sidecars
+node scripts/generate-manifest.mjs --check --version 0.3.5      # verify live CDN matches manifest
 
 # Plugin metadata validation
 claude plugin validate .
@@ -155,9 +155,9 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.4 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0, 0.3.1, 0.3.2, 0.3.3, and 0.3.4, with `manifest.json` + `.sha256`
-  sidecars; `channels.stable` = 0.3.4); all smoke legs are required.
+- The live CDN serves 0.3.5 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0, 0.3.1, 0.3.2, 0.3.3, 0.3.4, and 0.3.5, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.5); all smoke legs are required.
 - `publish-npm.yml` (tag `v*`): asserts tag == package.json version → gates
   on `generate-manifest.mjs --check` against the live CDN → publishes via
   npm trusted publishing (OIDC, `id-token: write`, npm ≥ 11.5.1 — no token
