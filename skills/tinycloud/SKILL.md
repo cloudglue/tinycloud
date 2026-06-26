@@ -118,6 +118,8 @@ tinycloud publish list --json
 
 # Share a video itself (hosted share page + HLS stream, like a Loom link)
 tinycloud publish video ./demo.mp4 --visibility public --json
+# Share a single moment — also returns data.moment_url (0.3.5+)
+tinycloud publish video ./demo.mp4 --clip-start 18 --clip-end 33 --json
 ```
 
 Per-verb details and all flags: [reference/verbs.md](reference/verbs.md).

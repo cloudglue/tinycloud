@@ -278,7 +278,7 @@ generated site name, or your `--name` label.
 
 ```bash
 tinycloud publish video <source> [--visibility public|private]   # default public
-  [--name <title>] [--segment-id <id>] --json
+  [--name <title>] [--segment-id <id>] [--clip-start <s> --clip-end <e>] --json
 tinycloud publish video list [--in <source>] [--visibility public|private] --json
 tinycloud publish video unpublish <share-id | source> --json   # --visibility disambiguates
 ```
@@ -297,6 +297,14 @@ feature id.
   `data.embed_snippet` (a `<cg-video share-id="...">` tag), which only plays
   on a PRIVATE published site of the same account — `tinycloud publish`
   rejects an artifact with a private embed targeted at a public site.
+- Moment window (0.3.5+): pass `--clip-start <s> --clip-end <e>` (seconds,
+  `clip-end > clip-start >= 0`, both required together or the command errors)
+  to also get `data.moment_url` — the hosted share page bounded to
+  `[start, end]`, with the same length badge, region strip, and "↺ Back to
+  moment" pill as the `<cg-video>` clip embed, and it survives the
+  private-share sign-in. Optional — omit it for a plain full-video share. The
+  same window is just `?s=<start>&e=<end>` appended to a `share_url`, so you
+  can hand-build a moment link from an existing share without re-publishing.
 
 When generating custom site HTML around a `<cg-video>` embed, use the
 component's built-ins instead of reinventing them. It defaults to a
