@@ -185,7 +185,8 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   are signed and short-lived (never hard-code them) — embed via
   `data.embed_snippet` (`<cg-video>`), which only plays on a private site of
   the same account. When writing HTML around an embed, use the component's
-  built-ins (`autoplay`+`muted`, `loop`, `start-time`, `exclusive`; JS
+  built-ins (`autoplay`+`muted`, `loop`, `start-time`, `exclusive`,
+  `clip-start`/`clip-end` to frame one "back to moment" clip; JS
   `playSegment(start, end?)`) and the container components
   (`<cg-playlist>`, `<cg-grid>`, `<cg-chapters>`) rather than hand-rolled
   players, galleries, or segment-list JS — details in

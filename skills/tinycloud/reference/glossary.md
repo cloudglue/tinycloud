@@ -92,7 +92,8 @@ connector?" or an envelope field needs explaining.
   embed via the `data.embed_snippet` `<cg-video>` tag, which only plays on a
   private published site of the same account. The embed has playback
   attributes (`autoplay`+`muted`, `loop`, `start-time`, `poster`,
-  `accent-color`, `exclusive`) and a JS API (`playSegment`, `seekTo`, media
+  `accent-color`, `exclusive`, and `clip-start`/`clip-end` to frame a single
+  "back to moment" clip) and a JS API (`playSegment`, `seekTo`, media
   events re-dispatched on the element) for custom site HTML, and plays
   standalone or inside the container components (`<cg-playlist>`,
   `<cg-grid>`, `<cg-chapters>`) — see reference/verbs.md.

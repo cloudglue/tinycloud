@@ -309,6 +309,17 @@ rest). Its JS API queues until ready — `playSegment(start, end?)`,
 element (`timeupdate`, `ended`, `cg-ready`); prefer `playSegment` over
 hand-rolled seek logic for "click a moment to play that segment" pages.
 
+To frame a single moment inside the full recording — a cited highlight you
+want to share on its own — add `clip-start`/`clip-end` (seconds) to a bare
+`<cg-video>`: the player draws a clip-length badge, a clip-region strip with a
+live playhead, snaps the first play to `clip-start`, and auto-pauses at
+`clip-end` (via `playSegment`). Scrubbing out of the window fades in a soft
+"↺ Back to moment" pill — a manual scrub-out is never forced back. Both are
+required and `clip-end` is ignored unless it is greater than `clip-start`; the
+pair is `<cg-video>`-only (not read on `<cg-playlist-item>`/`<cg-grid-item>`).
+Rule of thumb: one moment → `clip-start`/`clip-end` on a `<cg-video>`; several
+segments a viewer navigates between → `<cg-chapters>` (below).
+
 For multi-video or segment-navigation pages, prefer the container components
 over hand-rolled galleries and segment-list JS:
 

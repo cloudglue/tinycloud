@@ -16,11 +16,11 @@ The npm package is a small launcher: on first run it downloads the matching
 platform distribution from Cloudglue's CDN (cached under
 `~/.tinycloud/versions/<version>/`), verifies its checksum, and execs the real
 binary. The package version pins the binary version, so
-`npx @cloudglue/tinycloud@0.3.4` always runs tinycloud 0.3.4. It also adds two
+`npx @cloudglue/tinycloud@0.3.5` always runs tinycloud 0.3.5. It also adds two
 wrapper commands:
 
 ```bash
-tinycloud install --version 0.3.4   # pre-download a version
+tinycloud install --version 0.3.5   # pre-download a version
 tinycloud install --latest          # install latest stable and pin to it
 tinycloud update                    # move to latest stable, prune old versions
 ```
