@@ -22,6 +22,11 @@ cat sources.txt | tinycloud watch --json
 
 - Piping watch envelopes into `search` / `probe` / `ask` auto-scopes them via
   `ref.cloudglue_file_id` / collection ids.
+- A verb invoked with an explicit source/scope never reads stdin — only the
+  pipe form above (a source-less verb after `|`), `setup --stdin`, and a bare
+  `tinycloud` prompt do. When spawning tinycloud non-interactively (a subprocess
+  or a script), close or ignore its stdin (`</dev/null`, or Node
+  `stdio: ["ignore", …]`) and wrap the call in a timeout as a backstop.
 
 ## Multi-video batching
 

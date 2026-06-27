@@ -60,10 +60,12 @@ the exit code alone.
 
 `upstream` on a piped command means the upstream envelope was not `ready` —
 fix the upstream failure, don't retry downstream. `upstream` from a cloud
-call itself is a Cloudglue API failure; when it's a request deadline
-(retryable, message names `TINYCLOUD_HTTP_TIMEOUT_MS` /
-`TINYCLOUD_UPLOAD_TIMEOUT_MS`), the server may still be processing — retry
-or raise the knob.
+call itself is a Cloudglue API failure; transient ones (request deadline,
+408/429/5xx, idle-timeout abort) are marked `retryable`, and idempotent reads
+are already auto-retried with backoff before surfacing — so a retryable
+`upstream` means the server may still be processing or retries were exhausted:
+retry later or raise the knob the message names (`TINYCLOUD_HTTP_TIMEOUT_MS` /
+`TINYCLOUD_UPLOAD_TIMEOUT_MS`).
 
 ## JSON vs JSONL vs text
 
