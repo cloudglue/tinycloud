@@ -41,6 +41,15 @@ connector?" or an envelope field needs explaining.
   `cloudglue://files/<id>` URI, connector URI, collection, or a bare file-id
   UUID (normalized to `cloudglue://files/<id>`; an existing local path of the
   same name wins).
+- **Supported inputs** — local uploads (`watch`, `extract`, `face`,
+  `library collections add`) map by extension: video `.mp4 .mov .webm .mkv .m4v`,
+  audio `.mp3 .wav .m4a`. Other extensions upload as `application/octet-stream`
+  and may be rejected upstream — transcode to a mapped container first
+  (`clip transcode`). Local uploads are bounded by Cloudglue at ~3 GB and
+  2 s–3 h (connector ingests allow more). `face match`/`face search` query
+  images must be **JPEG or PNG**. Use `grab` for YouTube and
+  `library connectors sync` for share links rather than passing those URLs to
+  upload verbs.
 - **`ref` / `source_id` / `result_id`** — stable identifiers in every
   envelope. `ref` is a reusable pointer to the analyzed source (including
   `cloud_ready` and the Cloudglue file id) that pipes between verbs;
@@ -100,6 +109,14 @@ connector?" or an envelope field needs explaining.
   events re-dispatched on the element) for custom site HTML, and plays
   standalone or inside the container components (`<cg-playlist>`,
   `<cg-grid>`, `<cg-chapters>`) — see reference/verbs.md.
+- **Discovery components (live API, 0.3.6+)** — the same embed script also
+  defines four collection-scoped, **private-site-only** elements that let a
+  viewer search or chat inside a published site and play results inline via
+  `<cg-video>`: `<cg-chat>`, `<cg-search>`, `<cg-deep-search>` (over a
+  media-descriptions / rich-transcripts collection) and `<cg-face-search>` (over
+  a face-analysis collection). They carry no share id, but `tinycloud publish`
+  rejects them on a public site — publish `--visibility private`. See
+  reference/verbs.md.
 
 ## State and isolation (0.3.3+)
 
