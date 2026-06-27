@@ -91,7 +91,7 @@ tinycloud clip burn ./demo.mp4 --subtitle-file ./captions/demo.srt -o ./out.mp4 
 
 # Faces on a single video (cloud, 0.3.4+) — for collection-scale face search/list, see Collections below
 tinycloud face detect ./demo.mp4 --json                       # every face → normalized box + timestamp
-tinycloud face match ./person.jpg ./demo.mp4 --max-faces 10 --json   # query image, ranked 0–100 similarity
+tinycloud face match ./person.jpg ./demo.mp4 --max-faces 10 --json   # query image (JPEG/PNG), ranked 0–100 similarity
 
 # Remote videos, async jobs
 tinycloud grab https://youtu.be/<id> -o ./tinycloud-output/grabbed/ --json
@@ -193,6 +193,13 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   (`<cg-playlist>`, `<cg-grid>`, `<cg-chapters>`) rather than hand-rolled
   players, galleries, or segment-list JS — details in
   [reference/verbs.md](reference/verbs.md).
+- Live-API discovery components (0.3.6+): the same embed script also defines
+  collection-scoped, **private-site-only** elements that let viewers search/chat
+  inside a published site — `<cg-chat>`, `<cg-search>`, `<cg-deep-search>`,
+  `<cg-face-search>` (chat/search/deep-search need a media-descriptions or
+  rich-transcripts collection; face-search needs face-analysis). `publish`
+  **hard-rejects** them on a public site → publish with `--visibility private`.
+  See [reference/verbs.md](reference/verbs.md).
 
 ## 5. Reference (load on demand)
 

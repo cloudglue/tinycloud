@@ -7,14 +7,14 @@
   },
   "metadata": {
     "description": "Deep video work for coding agents: analyze, search, caption, clip, detect faces, and publish video via the tinycloud CLI.",
-    "version": "0.3.5"
+    "version": "0.3.6"
   },
   "plugins": [
     {
       "name": "tinycloud",
       "source": "./",
       "description": "Video understanding and editing via the tinycloud CLI (Cloudglue): watch/extract/search/ask/face over videos, captions, clips, collections, plus one-command workflows for sales coaching, blog posts, ad analysis, meeting breakdowns, and YouTube publishing.",
-      "version": "0.3.5",
+      "version": "0.3.6",
       "author": { "name": "Cloudglue" },
       "homepage": "https://tinycloud.sh",
       "repository": "https://github.com/cloudglue/tinycloud",

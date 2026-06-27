@@ -143,7 +143,9 @@ tinycloud face search <image> --in collection:col_… [col_…]
 a normalized 0–1 bounding box (`{top,left,width,height}`) plus a timestamp.
 `match` takes a query image — a local file (downscaled and sent inline, **never
 uploaded**) or an http(s) URL — and returns the closest faces ranked by a 0–100
-`similarity`. Both upload the *video* first like `watch`/`extract`
+`similarity`. The query image must be a **JPEG or PNG** (Cloudglue face matching
+decodes only JPEG/PNG — webp/heic/gif/bmp are rejected at preflight; a URL must
+likewise point at a JPEG/PNG). Both upload the *video* first like `watch`/`extract`
 (`needs_upload` without `--no-upload`) and cache by source + options, so re-runs
 are free. `--fps`/`--start`/`--end` tune sampling and window;
 `--max-faces`/`--min-similarity` bound `match`, `--limit` bounds `detect`,
@@ -345,6 +347,27 @@ private-embed guard: `tinycloud publish` rejects an artifact embedding a
 private share — directly or through a container — on a public site. The full
 reference ships with the binary as `references/cg-video.md` inside the
 bundled media-artifact skill (under the install's `skills/` directory).
+
+Discovery components (live API, 0.3.6+): the same `/__cg/embed.js` script also
+defines four **collection-scoped** components that let a viewer search or chat
+*inside* a published site and play the referenced moment inline via `<cg-video>`
+— `<cg-chat>` (conversational Q&A, streaming answers + inline moment citations;
+optional `placeholder`), `<cg-search>` (keyword/transcript text search),
+`<cg-deep-search>` (agentic semantic search), and `<cg-face-search>` (upload or
+paste a face image → matching moments). Each takes `collection="<id>"` (plus
+optional `accent-color` and `--cg-height` CSS sizing); the collection's `--type`
+must match the element — `<cg-chat>`/`<cg-search>`/`<cg-deep-search>` need a
+`media-descriptions` or `rich-transcripts` collection, `<cg-face-search>` needs a
+`face-analysis` collection. Unlike the playback elements they carry **no share
+id**, but their live calls are refused on a public site, so `tinycloud publish`
+**hard-rejects** a page that embeds any of them on a public site — publish with
+`--visibility private`. End to end: build a collection of the right type
+(`library collections create … --type …` → `library collections add` → poll
+`library collections show` until each file is `completed`) → author HTML with
+the component → `tinycloud publish <html> --visibility private`. Full reference
+plus a kitchen-sink page wiring every component (props, JS API, events) ships
+with the binary as `references/cg-video.md` and `references/kitchen-sink.html`
+inside the bundled media-artifact skill.
 
 ### setup — credentials
 

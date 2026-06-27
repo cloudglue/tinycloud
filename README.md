@@ -16,11 +16,11 @@ The npm package is a small launcher: on first run it downloads the matching
 platform distribution from Cloudglue's CDN (cached under
 `~/.tinycloud/versions/<version>/`), verifies its checksum, and execs the real
 binary. The package version pins the binary version, so
-`npx @cloudglue/tinycloud@0.3.5` always runs tinycloud 0.3.5. It also adds two
+`npx @cloudglue/tinycloud@0.3.6` always runs tinycloud 0.3.6. It also adds two
 wrapper commands:
 
 ```bash
-tinycloud install --version 0.3.5   # pre-download a version
+tinycloud install --version 0.3.6   # pre-download a version
 tinycloud install --latest          # install latest stable and pin to it
 tinycloud update                    # move to latest stable, prune old versions
 ```
@@ -143,7 +143,7 @@ tinycloud caption ./demo.mp4 --format srt --transcript --json
 tinycloud clip cut ./demo.mp4 --start 12 --end 28 -o clip.mp4 --json
 # Grounded Q&A over one or more videos
 tinycloud ask "What objections came up?" --in ./demo.mp4 --json
-# Detect faces, or match a known face against a video (0.3.4+)
+# Detect faces, or match a known face against a video (0.3.4+; query image: JPEG/PNG)
 tinycloud face match ./person.jpg ./demo.mp4 --max-faces 10 --json
 ```
 
