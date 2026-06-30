@@ -41,7 +41,7 @@ tinycloud caption ./talks/*.mp4 --format srt -o ./tinycloud-output/captions/ --j
 
 ## Async jobs
 
-Long cloud operations (`watch`, `extract`) support `--background`:
+Long cloud operations (`watch`, `see`, `extract`) support `--background`:
 
 ```bash
 tinycloud watch ./long.mp4 --background --json   # → status:"pending", meta.job_id

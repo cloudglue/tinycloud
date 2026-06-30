@@ -181,7 +181,7 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   `http(s)` image URL is analyzed in place (no upload). Images can't be added to
   collections.
 - Do not pass `--background` to `ask`; background jobs exist only for tracked
-  async ops (`watch`, `extract`).
+  async ops (`watch`, `see`, `extract`).
 - `workflow status` / `workflow resume` are not implemented in 0.3.x; treat
   `paused`/`partial` as terminal and surface `resume` metadata to the user.
 - `--no-upload` / `--no-download` make commands refuse cloud upload / local
