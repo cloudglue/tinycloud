@@ -175,11 +175,12 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   `cloudglue://files/<id>`; an existing local path of the same name wins).
 - Images (0.3.7+): use `see` to describe an image and `extract` to pull
   structured data from one — **JPEG/PNG/WebP only** (HEIC/GIF/BMP are rejected
-  with a "transcode first" hint). `watch <image>` errors and points you to
-  `see`; images have no segments, so drop `--segment-level`/`--segmentation`/
-  `--shot-*` on an image source. A local image uploads first; a public
-  `http(s)` image URL is analyzed in place (no upload). Images can't be added to
-  collections.
+  with a "transcode first" hint). `watch <image>` and `caption <image>` error
+  and redirect you to `see`/`extract` (an image has no video track to analyze
+  or speech to caption); images have no segments, so drop `--segment-level`/
+  `--segmentation`/`--shot-*` on an image source. A local image uploads first; a
+  public `http(s)` image URL is analyzed in place (no upload). Images can't be
+  added to collections. Local `search` can match cached `see` results.
 - Do not pass `--background` to `ask`; background jobs exist only for tracked
   async ops (`watch`, `see`, `extract`).
 - `workflow status` / `workflow resume` are not implemented in 0.3.x; treat

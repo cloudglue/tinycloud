@@ -109,12 +109,18 @@ tinycloud caption <source> [--format srt|vtt|ass] [--transcript]
   [--diarize] [--word-level] [-o <file-or-dir>]
 ```
 
+Video/audio only — an image source is rejected ("Images have no speech to
+caption — use `tinycloud see` or `tinycloud extract` to read an image's text.").
+
 ### search — local keyword search (free)
 
 ```bash
 tinycloud search "<keyword>" [--in <paths|source-ids|collection-ids|all>]
   [--field speech|visual|text|entities] [--limit 50]
 ```
+
+Searches cached context locally, including cached `see` image results (0.3.7+),
+so a describe you've already run is greppable without another cloud call.
 
 ### probe — semantic search (cloud)
 
