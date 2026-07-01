@@ -1,15 +1,17 @@
 ---
 name: tinycloud
 description: >-
-  Deep video work via the tinycloud CLI (Cloudglue). Use whenever the task
-  involves understanding or manipulating video or audio-visual media: analyze
-  or summarize a video, extract structured facts/moments/entities, generate
-  captions or transcripts (SRT/VTT), search inside videos, answer questions
-  about footage, cut/stitch/thumbnail/transcode clips, download remote videos,
-  browse Cloudglue collections, or run packaged video workflows. Triggers on
-  video files (.mp4, .mov, .webm, ...), YouTube/video URLs, Cloudglue
-  collections, or any "what's in this video / make clips / caption this"
-  request. Every command returns a machine-readable JSON envelope.
+  Deep video and image work via the tinycloud CLI (Cloudglue). Use whenever the
+  task involves understanding or manipulating video, audio-visual media, or
+  images: analyze or summarize a video, describe or analyze an image, extract
+  structured facts/moments/entities from a video or image, generate captions or
+  transcripts (SRT/VTT), search inside videos, answer questions about footage,
+  cut/stitch/thumbnail/transcode clips, download remote videos, browse Cloudglue
+  collections, or run packaged video workflows. Triggers on video files (.mp4,
+  .mov, .webm, ...), image files (.jpg, .png, .webp), YouTube/video URLs,
+  Cloudglue collections, or any "what's in this video / describe this image /
+  make clips / caption this" request. Every command returns a machine-readable
+  JSON envelope.
 ---
 
 # Tinycloud: video operations for agents
@@ -61,7 +63,7 @@ Full schema and error codes: [reference/envelope.md](reference/envelope.md).
 
 ## 2. Core verbs (cheat sheet)
 
-Cloud verbs (`watch extract probe ask publish face`) call the Cloudglue API
+Cloud verbs (`watch see extract probe ask publish face`) call the Cloudglue API
 using the configured key — usage is billed per the
 [rate card](https://app.cloudglue.dev/home/billing/rate-card). `search clip
 setup` are local and free; `grab jobs` are network-only.
@@ -71,9 +73,14 @@ setup` are local and free; `grab jobs` are network-only.
 # Understand a video (creates reusable cached context + cloud-ready ref)
 tinycloud watch ./demo.mp4 --json
 
+# Understand an image — the file-level counterpart of watch (0.3.7+, JPEG/PNG/WebP)
+tinycloud see ./photo.jpg --json
+
 # Pipe context into structured extraction (JSONL flows between pipes)
 tinycloud watch ./demo.mp4 --json | tinycloud extract "key moments with timestamps" --json
 tinycloud extract --schema ./schema.json ./demo.mp4 --segment-level --json
+# extract also takes an image source (0.3.7+) — no segment/shot flags on images
+tinycloud extract "on-screen text and key objects" ./photo.png --json
 
 # Captions / transcripts
 tinycloud caption ./demo.mp4 --format srt --transcript -o ./tinycloud-output/captions/ --json
@@ -166,8 +173,16 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
 - Sources: local paths, URLs, `cloudglue://files/<id>` URIs,
   `collection:col_…`, or a bare Cloudglue file-id UUID (normalized to
   `cloudglue://files/<id>`; an existing local path of the same name wins).
+- Images (0.3.7+): use `see` to describe an image and `extract` to pull
+  structured data from one — **JPEG/PNG/WebP only** (HEIC/GIF/BMP are rejected
+  with a "transcode first" hint). `watch <image>` and `caption <image>` error
+  and redirect you to `see`/`extract` (an image has no video track to analyze
+  or speech to caption); images have no segments, so drop `--segment-level`/
+  `--segmentation`/`--shot-*` on an image source. A local image uploads first; a
+  public `http(s)` image URL is analyzed in place (no upload). Images can't be
+  added to collections. Local `search` can match cached `see` results.
 - Do not pass `--background` to `ask`; background jobs exist only for tracked
-  async ops (`watch`, `extract`).
+  async ops (`watch`, `see`, `extract`).
 - `workflow status` / `workflow resume` are not implemented in 0.3.x; treat
   `paused`/`partial` as terminal and surface `resume` metadata to the user.
 - `--no-upload` / `--no-download` make commands refuse cloud upload / local

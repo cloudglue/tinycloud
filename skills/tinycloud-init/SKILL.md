@@ -22,8 +22,8 @@ in order, skipping any that already pass.
 command -v tinycloud && tinycloud --version --json </dev/null
 ```
 
-If installed and the JSON reports `"version"` ≥ 0.3.4 (the floor the tinycloud
-skill requires), go to step 2. If missing, older than 0.3.4, or no
+If installed and the JSON reports `"version"` ≥ 0.3.7 (the floor the tinycloud
+skill requires), go to step 2. If missing, older than 0.3.7, or no
 machine-readable version, install or upgrade it — ask the user which they
 prefer:
 

@@ -1,9 +1,10 @@
 # Tinycloud
 
-Agent CLI for deep video work. Point it at videos and ask for analysis,
-dashboards, subtitles, clips, search, or repurposed content — or drive its
-verbs directly from your own agent. Powered by [Cloudglue](https://cloudglue.dev).
-Learn more at [tinycloud.sh](https://tinycloud.sh).
+Agent CLI for deep video and image work. Point it at videos or images and ask
+for analysis, dashboards, subtitles, clips, search, or repurposed content — or
+drive its verbs directly from your own agent. Powered by
+[Cloudglue](https://cloudglue.dev). Learn more at
+[tinycloud.sh](https://tinycloud.sh).
 
 ## Install
 
@@ -16,11 +17,11 @@ The npm package is a small launcher: on first run it downloads the matching
 platform distribution from Cloudglue's CDN (cached under
 `~/.tinycloud/versions/<version>/`), verifies its checksum, and execs the real
 binary. The package version pins the binary version, so
-`npx @cloudglue/tinycloud@0.3.6` always runs tinycloud 0.3.6. It also adds two
+`npx @cloudglue/tinycloud@0.3.7` always runs tinycloud 0.3.7. It also adds two
 wrapper commands:
 
 ```bash
-tinycloud install --version 0.3.6   # pre-download a version
+tinycloud install --version 0.3.7   # pre-download a version
 tinycloud install --latest          # install latest stable and pin to it
 tinycloud update                    # move to latest stable, prune old versions
 ```
@@ -116,7 +117,8 @@ go to stderr) — pass `--json`.
 | Command | What it does |
 |---|---|
 | `watch` | Analyze a video → reusable cached context + Cloudglue-ready ref |
-| `extract` | Pull structured facts, entities, or moments (free-form or JSON-schema) |
+| `see` | Analyze an image → reusable cached context + Cloudglue-ready ref (JPEG/PNG/WebP) |
+| `extract` | Pull structured facts, entities, or moments from a video or image (free-form or JSON-schema) |
 | `caption` | Subtitles and transcripts (SRT/VTT/ASS) |
 | `search` | Keyword search over cached video context |
 | `probe` | Semantic moment/video search over a Cloudglue scope |
@@ -135,8 +137,12 @@ A few common invocations:
 ```bash
 # Analyze a video into reusable, cached context + a Cloudglue-ready ref
 tinycloud watch ./demo.mp4 --json
+# Describe an image — the file-level counterpart of watch (JPEG/PNG/WebP)
+tinycloud see ./photo.jpg --json
 # Pull structured findings (free-form query here; pass --schema for a fixed shape)
 tinycloud extract "key moments with timestamps" ./demo.mp4 --json
+# extract also works on an image source (no segment/shot flags on images)
+tinycloud extract "on-screen text and key objects" ./photo.png --json
 # Subtitles plus a markdown transcript
 tinycloud caption ./demo.mp4 --format srt --transcript --json
 # Trim a clip locally — no upload, ffmpeg-backed

@@ -101,8 +101,9 @@ binary reports in `--version --json`.
 | `TINYCLOUD_HTTP_TIMEOUT_MS` | Hard deadline per Cloudglue request (default 120s; `0` disables) |
 | `TINYCLOUD_UPLOAD_TIMEOUT_MS` | Total deadline for upload-shaped requests (default 60min; `0` disables) |
 | `TINYCLOUD_UPLOAD_IDLE_TIMEOUT_MS` | Idle (no-progress) deadline for an upload — aborts a wedged transfer in ~1min instead of waiting out the total upload deadline (default 60s; `0` disables) |
-| `TINYCLOUD_HTTP_RETRIES` | Bounded auto-retries for idempotent (GET/HEAD) Cloudglue calls on transient errors — 408/429/5xx, network blips (default 3; `0` disables) |
+| `TINYCLOUD_HTTP_RETRIES` | Bounded auto-retries for idempotent (GET/HEAD) Cloudglue calls on transient errors — 408/429/5xx, network blips (default 5; `0` disables) |
 | `TINYCLOUD_JOB_WAIT_TIMEOUT_MS` | Wall-clock budget for async job waits (the `waitForReady` poll behind `watch`/`extract`/`face`) (default 10min; `0` disables) |
+| `TINYCLOUD_MODEL_RETRIES` | Client-side retries for the interactive agent's chat-model turns on transient connection errors (default 5; `0` disables). 0.3.7+ |
 
 Every Cloudglue request carries a hard deadline, so a stalled route can never
 hang the CLI indefinitely; a timeout surfaces as a retryable `upstream` error

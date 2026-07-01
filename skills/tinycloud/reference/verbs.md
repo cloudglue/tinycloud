@@ -7,7 +7,8 @@ every verb. Regenerate doubts from it instead of trusting prose.
 | Verb | Cost | Auth | Use |
 |---|---|---|---|
 | `watch` | cloud | yes | Analyze a video → reusable context + Cloudglue-ready ref |
-| `extract` | cloud | yes | Pull structured facts, entities, or moments |
+| `see` | cloud | yes | Analyze an image → reusable context + Cloudglue-ready ref (0.3.7+) |
+| `extract` | cloud | yes | Pull structured facts, entities, or moments (from a video **or** image) |
 | `caption` | varies | no | Subtitles and transcripts (SRT/VTT/ASS) |
 | `search` | local | no | Local keyword search over cached context |
 | `probe` | cloud | yes | Semantic moment/video search over a Cloudglue-ready scope |
@@ -60,9 +61,30 @@ Shot bounds tune `--segment shots` only: min 0.6–600 (fractional/sub-second
 values catch flash frames and rapid cuts), max 1–600, min ≤ max. Out-of-range
 or wrong-mode values fail with a validation envelope before any upload. The
 bounds are part of the cache key, so tuned and default shot passes never
-collide.
+collide. `watch` is **video/audio only** — point it at an image and it errors
+("watch analyzes video/audio; for an image use `tinycloud see`").
 
-### extract — structured facts
+### see — analyze an image (cloud, 0.3.7+)
+
+```bash
+tinycloud see <image> [--visual-only] [--background] --json
+```
+
+The image counterpart of `watch`: file-level image understanding (title +
+description + on-screen text) that produces reusable cached context and a
+Cloudglue-ready ref. Images are **file-level only** — there is no segmentation,
+no shots, no speech/transcript, and no `--start`/`--end` window, so `see` carries
+none of those flags (only `--visual-only` to skip the textual read, plus the
+shared output/cache/upload/source-reuse flags). Accepts **JPEG, PNG, or WebP**;
+other types (HEIC/GIF/BMP/…) are rejected before upload with
+`Unsupported image type for see: <name>. Transcode to JPEG, PNG, or WebP first.`
+A local image uploads first (`needs_upload` without `--no-upload`); a public
+`http(s)` URL that points directly at a JPEG/PNG/WebP image is analyzed **in
+place — no upload** (a URL that can't be recognized as a direct image returns
+`needs_download` — fetch it first with `grab`). Results cache by source +
+options, so re-runs are free.
+
+### extract — structured facts (video or image)
 
 ```bash
 tinycloud extract "<query>" <source> --json          # free-form query
@@ -72,8 +94,13 @@ tinycloud extract --schema ./schema.json <source>    # JSON-schema-shaped output
   [--include-thumbnails] [--transcript-mode] [--background]
 ```
 
-`--shot-min-seconds`/`--shot-max-seconds` work exactly as on `watch`, against
-`--segmentation shots`.
+`<source>` may be a video **or an image** (0.3.7+) — same JPEG/PNG/WebP rule
+and local-upload-vs-URL-in-place behavior as `see`. The segmentation flags
+(`--segment-level`/`--segmentation`/`--shot-*`) apply to video only; pass any of
+them with an image source and `extract` rejects it before upload
+(`Images have no segments — drop --segment-level/--segmentation/--shot-* for an
+image source.`). `--shot-min-seconds`/`--shot-max-seconds` work exactly as on
+`watch`, against `--segmentation shots`.
 
 ### caption — subtitles and transcripts
 
@@ -82,12 +109,18 @@ tinycloud caption <source> [--format srt|vtt|ass] [--transcript]
   [--diarize] [--word-level] [-o <file-or-dir>]
 ```
 
+Video/audio only — an image source is rejected ("Images have no speech to
+caption — use `tinycloud see` or `tinycloud extract` to read an image's text.").
+
 ### search — local keyword search (free)
 
 ```bash
 tinycloud search "<keyword>" [--in <paths|source-ids|collection-ids|all>]
   [--field speech|visual|text|entities] [--limit 50]
 ```
+
+Searches cached context locally, including cached `see` image results (0.3.7+),
+so a describe you've already run is greppable without another cloud call.
 
 ### probe — semantic search (cloud)
 
@@ -385,18 +418,18 @@ Output: `--json` (force JSONL envelopes), `--pretty` (one JSON array),
 `--data raw`, `--raw-output` (raw backend payload; disables pipe protocol),
 `--quiet`, `--verbose`.
 
-Cache — on `watch`, `extract`, `caption`, `face`, and `workflow` only:
+Cache — on `watch`, `see`, `extract`, `caption`, `face`, and `workflow` only:
 `--refresh` (recompute), `--no-cache` (no persistence), `--cached` (reuse
 exact-match history). `ask`/`probe` always call the cloud; use `search` for a
 free cached lookup.
 
 Upload/download refusal — on every verb that resolves a source:
-`--no-upload` (refuse cloud upload → `needs_upload`) on `watch`/`extract`/
+`--no-upload` (refuse cloud upload → `needs_upload`) on `watch`/`see`/`extract`/
 `caption`/`face`/`workflow`/`publish` and `library collections add`;
 `--no-download` (refuse local materialization → `needs_download`) on the same
 set minus `publish`.
 
-Source reuse (`watch`/`extract`/`caption`): `--source-id <id>`, `--result-id <id>`.
+Source reuse (`watch`/`see`/`extract`/`caption`): `--source-id <id>`, `--result-id <id>`.
 
 Sources: local paths, URLs, `cloudglue://files/<id>` URIs,
 `collection:col_…`, or a bare Cloudglue file-id UUID — bare ids are

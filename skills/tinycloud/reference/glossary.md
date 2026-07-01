@@ -41,15 +41,18 @@ connector?" or an envelope field needs explaining.
   `cloudglue://files/<id>` URI, connector URI, collection, or a bare file-id
   UUID (normalized to `cloudglue://files/<id>`; an existing local path of the
   same name wins).
-- **Supported inputs** — local uploads (`watch`, `extract`, `face`,
+- **Supported inputs** — local uploads (`watch`, `see`, `extract`, `face`,
   `library collections add`) map by extension: video `.mp4 .mov .webm .mkv .m4v`,
-  audio `.mp3 .wav .m4a`. Other extensions upload as `application/octet-stream`
+  audio `.mp3 .wav .m4a`, and (for `see`/`extract` only, 0.3.7+) image
+  `.jpg .jpeg .png .webp`. Other extensions upload as `application/octet-stream`
   and may be rejected upstream — transcode to a mapped container first
-  (`clip transcode`). Local uploads are bounded by Cloudglue at ~3 GB and
-  2 s–3 h (connector ingests allow more). `face match`/`face search` query
-  images must be **JPEG or PNG**. Use `grab` for YouTube and
-  `library connectors sync` for share links rather than passing those URLs to
-  upload verbs.
+  (`clip transcode`); unsupported image types (HEIC/GIF/BMP) are rejected before
+  upload with a "transcode to JPEG, PNG, or WebP" hint. Local uploads are bounded
+  by Cloudglue at ~3 GB and 2 s–3 h (connector ingests allow more); a public
+  `http(s)` image URL is analyzed in place with no upload. `face match`/`face
+  search` query images must be **JPEG or PNG**. Images can't be added to
+  collections. Use `grab` for YouTube and `library connectors sync` for share
+  links rather than passing those URLs to upload verbs.
 - **`ref` / `source_id` / `result_id`** — stable identifiers in every
   envelope. `ref` is a reusable pointer to the analyzed source (including
   `cloud_ready` and the Cloudglue file id) that pipes between verbs;
@@ -64,6 +67,11 @@ connector?" or an envelope field needs explaining.
   produces (summary, segments, transcript-ish context). Cached locally and
   mirrored in Cloudglue, so later `extract`/`ask`/`search` reuse it instead
   of re-analyzing.
+- **See / image describe (0.3.7+)** — the image counterpart of `watch`:
+  `tinycloud see <image>` produces file-level image context (title,
+  description, on-screen text) and a reusable `ref`, with no segmentation or
+  shots. JPEG/PNG/WebP only; `extract` accepts the same image sources for
+  structured pulls.
 - **Segmentation** — how a video is split for analysis: `chapters`
   (semantic), `shots` (visual cuts; bounds tunable via
   `--shot-min-seconds`/`--shot-max-seconds`, sub-second min allowed),

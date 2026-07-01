@@ -1,7 +1,7 @@
 {
   "name": "@cloudglue/tinycloud",
-  "version": "0.3.6",
-  "description": "Agent CLI for deep video work, by Cloudglue. Downloads the tinycloud binary on first run.",
+  "version": "0.3.7",
+  "description": "Agent CLI for deep video and image work, by Cloudglue. Downloads the tinycloud binary on first run.",
   "bin": {
     "tinycloud": "bin/tinycloud.js"
   },
