@@ -108,12 +108,15 @@ connector?" or an envelope field needs explaining.
   an HLS stream; one active share per (file, visibility). Adding
   `--clip-start`/`--clip-end` (seconds, 0.3.5+) also returns `data.moment_url`,
   the share page bounded to that "back to moment" window (also reachable as
-  `?s=<start>&e=<end>` on a `share_url`). Private shares
+  `?s=<start>&e=<end>` on a `share_url`); adding `--clip-only` (0.3.8+,
+  feature `publish.video.moment.hard.v1`) upgrades it to a hard clip —
+  `&clip=hard`, the page plays only the moment. Private shares
   embed via the `data.embed_snippet` `<cg-video>` tag, which only plays on a
   private published site of the same account. The embed has playback
   attributes (`autoplay`+`muted`, `loop`, `start-time`, `poster`,
   `accent-color`, `exclusive`, and `clip-start`/`clip-end` to frame a single
-  "back to moment" clip) and a JS API (`playSegment`, `seekTo`, media
+  "back to moment" clip — `clip-only`, 0.3.8+, plays nothing but that
+  window) and a JS API (`playSegment`, `seekTo`, media
   events re-dispatched on the element) for custom site HTML, and plays
   standalone or inside the container components (`<cg-playlist>`,
   `<cg-grid>`, `<cg-chapters>`) — see reference/verbs.md.

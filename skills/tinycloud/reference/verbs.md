@@ -313,7 +313,7 @@ generated site name, or your `--name` label.
 
 ```bash
 tinycloud publish video <source> [--visibility public|private]   # default public
-  [--name <title>] [--segment-id <id>] [--clip-start <s> --clip-end <e>] --json
+  [--name <title>] [--segment-id <id>] [--clip-start <s> --clip-end <e> [--clip-only]] --json
 tinycloud publish video list [--in <source>] [--visibility public|private] --json
 tinycloud publish video unpublish <share-id | source> --json   # --visibility disambiguates
 ```
@@ -340,6 +340,17 @@ feature id.
   private-share sign-in. Optional — omit it for a plain full-video share. The
   same window is just `?s=<start>&e=<end>` appended to a `share_url`, so you
   can hand-build a moment link from an existing share without re-publishing.
+- Hard clip (0.3.8+): add `--clip-only` to a `--clip-start`/`--clip-end` pair
+  (it requires both — the command errors before anything uploads) and
+  `data.moment_url` ends in `?s=<start>&e=<end>&clip=hard`: the share page
+  plays ONLY the moment (trimmed stream; the seek bar is the clip) instead of
+  the full video with a "back to moment" overlay. The flag survives the
+  pending → re-run flow (the `next` hint carries it), and the same suffix
+  works hand-built on an existing `share_url`. Gated by the
+  `publish.video.moment.hard.v1` feature id; older share pages ignore
+  `&clip=hard` and fall back to the soft window. It shapes the viewing
+  experience, not access control — anyone with the bare `share_url` still has
+  the whole video; restrict access with `--visibility private`.
 
 When generating custom site HTML around a `<cg-video>` embed, use the
 component's built-ins instead of reinventing them. It defaults to a
@@ -360,7 +371,13 @@ live playhead, snaps the first play to `clip-start`, and auto-pauses at
 "↺ Back to moment" pill — a manual scrub-out is never forced back. Both are
 required and `clip-end` is ignored unless it is greater than `clip-start`; the
 pair is `<cg-video>`-only (not read on `<cg-playlist-item>`/`<cg-grid-item>`).
-Rule of thumb: one moment → `clip-start`/`clip-end` on a `<cg-video>`; several
+Adding `clip-only` (embed v6, 0.3.8+) hardens the window: the player shows
+only the clip, with the timeline re-based to it — no badge, strip, or pill,
+because there is nothing to scrub back to. It is honored only alongside a
+valid `clip-start`/`clip-end` pair, and older embed scripts ignore it,
+degrading to the soft behavior above.
+Rule of thumb: one moment → `clip-start`/`clip-end` on a `<cg-video>`
+(`clip-only` if viewers should see nothing but the moment); several
 segments a viewer navigates between → `<cg-chapters>` (below).
 
 For multi-video or segment-navigation pages, prefer the container components
