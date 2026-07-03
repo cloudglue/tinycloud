@@ -127,6 +127,8 @@ tinycloud publish list --json
 tinycloud publish video ./demo.mp4 --visibility public --json
 # Share a single moment — also returns data.moment_url (0.3.5+)
 tinycloud publish video ./demo.mp4 --clip-start 18 --clip-end 33 --json
+# Hard clip — the share page plays ONLY the moment (0.3.8+)
+tinycloud publish video ./demo.mp4 --clip-start 18 --clip-end 33 --clip-only --json
 ```
 
 Per-verb details and all flags: [reference/verbs.md](reference/verbs.md).
@@ -203,7 +205,8 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   `data.embed_snippet` (`<cg-video>`), which only plays on a private site of
   the same account. When writing HTML around an embed, use the component's
   built-ins (`autoplay`+`muted`, `loop`, `start-time`, `exclusive`,
-  `clip-start`/`clip-end` to frame one "back to moment" clip; JS
+  `clip-start`/`clip-end` to frame one "back to moment" clip — plus
+  `clip-only`, 0.3.8+, to play nothing but that window; JS
   `playSegment(start, end?)`) and the container components
   (`<cg-playlist>`, `<cg-grid>`, `<cg-chapters>`) rather than hand-rolled
   players, galleries, or segment-list JS — details in
