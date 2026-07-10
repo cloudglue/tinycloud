@@ -28,16 +28,16 @@ node --test test/unit.test.mjs            # just the unit suite
 TINYCLOUD_TEST_TARBALL=~/Downloads/tinycloud-darwin-arm64.tar.gz npm test   # e2e against a real dist tarball
 
 # Contract smoke tests against an installed/extracted binary
-TINYCLOUD_CMD=/path/to/tinycloud EXPECTED_VERSION=0.3.8 bash scripts/smoke-test.sh
+TINYCLOUD_CMD=/path/to/tinycloud EXPECTED_VERSION=0.3.9 bash scripts/smoke-test.sh
 
 # Serve a tarball as a fake CDN (modes: --corrupt, --no-manifest)
-node test/fixtures/make-fixture-cdn.mjs --tarball <path>.tar.gz --version 0.3.8 --port 8787
+node test/fixtures/make-fixture-cdn.mjs --tarball <path>.tar.gz --version 0.3.9 --port 8787
 TINYCLOUD_DIST_URL=http://127.0.0.1:8787 TINYCLOUD_INSTALL_DIR=$(mktemp -d) node bin/tinycloud.js --version --json
 TINYCLOUD_DIST_URL=http://127.0.0.1:8787 bash install.sh --install-dir $(mktemp -d)/bin
 
 # Release manifest tooling (maintainer)
-node scripts/generate-manifest.mjs --version 0.3.8 --from-cdn   # build manifest + .sha256 sidecars
-node scripts/generate-manifest.mjs --check --version 0.3.8      # verify live CDN matches manifest
+node scripts/generate-manifest.mjs --version 0.3.9 --from-cdn   # build manifest + .sha256 sidecars
+node scripts/generate-manifest.mjs --check --version 0.3.9      # verify live CDN matches manifest
 
 # Plugin metadata validation
 claude plugin validate .
@@ -103,7 +103,8 @@ stdout (logs on stderr) with `status`:
 → exit codes 0/0/2/3/3/0/1. `tinycloud commands --json` is the authoritative
 flag list — verify doc claims against it, not memory (a doc bug shipped once
 because `--cached` only exists on watch/see/extract/caption/face/workflow). As
-of 0.3.8 there are 15 verbs: `see` (0.3.7+) analyzes an **image** (file-level,
+of 0.3.9 (command surface unchanged since 0.3.8) there are 15 verbs: `see`
+(0.3.7+) analyzes an **image** (file-level,
 JPEG/PNG/WebP — the image counterpart of `watch`) and `extract` also takes
 an image source (features `see.v1`, `extract.images.v1`); 0.3.8 adds
 `publish video --clip-only` (hard clip: `data.moment_url` gains `&clip=hard`
@@ -161,9 +162,9 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.8 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0, 0.3.1, 0.3.2, 0.3.3, 0.3.4, 0.3.5, 0.3.6, 0.3.7, and 0.3.8, with `manifest.json` + `.sha256`
-  sidecars; `channels.stable` = 0.3.8); all smoke legs are required.
+- The live CDN serves 0.3.9 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0 through 0.3.9, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.9); all smoke legs are required.
 - `publish-npm.yml` (tag `v*`): asserts tag == package.json version → gates
   on `generate-manifest.mjs --check` against the live CDN → publishes via
   npm trusted publishing (OIDC, `id-token: write`, npm ≥ 11.5.1 — no token
