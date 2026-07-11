@@ -31,10 +31,21 @@ Usage is billed to that key per the
 [rate card](https://app.cloudglue.dev/home/billing/rate-card).
 
 ```bash
+tinycloud login                               # browser sign-in → provisions & saves a key (0.3.10+)
+# or paste/point at a key yourself:
 tinycloud setup cloudglue --api-key <key>     # persist the key
 # or
 export CLOUDGLUE_API_KEY=<key>                # env only, nothing persisted
 ```
+
+`tinycloud login` (0.3.10+) runs an OAuth-style device sign-in: it best-effort
+opens the Cloudglue dashboard, you approve a short code, and a normal `cg-` API
+key is minted and saved to config exactly like a pasted key — you never handle
+the key. It blocks on a browser flow (~minutes), so for headless or scripted
+setup prefer `setup cloudglue --api-key` / `$CLOUDGLUE_API_KEY`. When a cloud
+verb hits missing credentials, the `needs_credentials` envelope's `setup` object
+now carries both `setup.command` (`tinycloud setup cloudglue`) and
+`setup.login_command` (`tinycloud login`).
 
 `frameio` is an optional service and requires interactive OAuth
 (`tinycloud setup frameio` inside the tinycloud agent TUI).

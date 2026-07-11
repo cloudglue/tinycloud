@@ -43,18 +43,26 @@ at https://tinycloud.sh. Windows is unsupported — use WSL2.
 tinycloud setup --check --json </dev/null
 ```
 
-If `data.ok` is `true`, go to step 3. Otherwise tell the user: cloud
-features run through a Cloudglue account — keys live at
-[app.cloudglue.dev](https://app.cloudglue.dev) (usage billed per the
-[rate card](https://app.cloudglue.dev/home/billing/rate-card)). Ask them to
-paste their API key, then configure it via stdin so the key never lands in
-shell history or process args:
+If `data.ok` is `true`, go to step 3. Otherwise cloud features run through a
+Cloudglue account (usage billed per the
+[rate card](https://app.cloudglue.dev/home/billing/rate-card)) — connect one of
+two ways:
 
-```bash
-printf '%s' "<key>" | tinycloud setup cloudglue --stdin
-```
+- **Browser sign-in (recommended; tinycloud 0.3.10+).** Ask the user to run
+  `tinycloud login` **themselves in their terminal** — it's an interactive
+  browser flow you can't drive from here. It opens the Cloudglue dashboard, they
+  approve a short code, and a key is provisioned and saved automatically (no
+  copy-pasting keys).
+- **Paste an API key.** If they'd rather paste an existing key (or their
+  tinycloud predates `login`), have them get one at
+  [app.cloudglue.dev](https://app.cloudglue.dev) and configure it via stdin so
+  the key never lands in shell history or process args — this path you can run:
 
-Re-run `tinycloud setup --check --json` and confirm `data.ok == true`.
+  ```bash
+  printf '%s' "<key>" | tinycloud setup cloudglue --stdin
+  ```
+
+Then re-run `tinycloud setup --check --json` and confirm `data.ok == true`.
 
 ## 3. Prove it works (free)
 

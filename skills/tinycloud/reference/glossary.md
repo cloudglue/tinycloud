@@ -14,6 +14,12 @@ connector?" or an envelope field needs explaining.
 - **tinycloud** — the agent CLI distributed from this repo
   (https://tinycloud.sh). Local verbs (`clip`, `search`, `setup`) run on your
   machine; cloud verbs call Cloudglue with your API key.
+- **Browser sign-in / device login (0.3.10+)** — `tinycloud login` runs an
+  OAuth-style device-authorization flow: it prints a short code + verification
+  URL, opens the Cloudglue dashboard, and on approval mints a normal `cg-` API
+  key saved to config exactly like a pasted key (the raw key is never printed).
+  The interactive counterpart of `setup cloudglue --api-key`; paste-key and
+  `$CLOUDGLUE_API_KEY` remain fully supported for headless/scripted setup.
 
 ## Media and identity
 
