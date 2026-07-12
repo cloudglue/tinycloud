@@ -17,11 +17,11 @@ The npm package is a small launcher: on first run it downloads the matching
 platform distribution from Cloudglue's CDN (cached under
 `~/.tinycloud/versions/<version>/`), verifies its checksum, and execs the real
 binary. The package version pins the binary version, so
-`npx @cloudglue/tinycloud@0.3.9` always runs tinycloud 0.3.9. It also adds two
+`npx @cloudglue/tinycloud@0.3.10` always runs tinycloud 0.3.10. It also adds two
 wrapper commands:
 
 ```bash
-tinycloud install --version 0.3.9   # pre-download a version
+tinycloud install --version 0.3.10   # pre-download a version
 tinycloud install --latest          # install latest stable and pin to it
 tinycloud update                    # move to latest stable, prune old versions
 ```
@@ -38,9 +38,12 @@ supported — use WSL2.
 
 ### Setup
 
-Cloud features need a Cloudglue API key:
+Cloud features need a Cloudglue API key. The quickest way is browser sign-in
+(0.3.10+) — it provisions a key for you, no copy-paste:
 
 ```bash
+tinycloud login                             # browser sign-in → provisions & saves a key (0.3.10+)
+# or paste a key yourself:
 tinycloud setup cloudglue --api-key <key>   # or: export CLOUDGLUE_API_KEY=...
 tinycloud setup --check --json              # verify
 ```
@@ -131,6 +134,7 @@ go to stderr) — pass `--json`.
 | `workflow` | Run packaged pipeline recipes (see below) |
 | `publish` | Publish HTML artifacts as Cloudglue Sites; share videos |
 | `setup` | Configure the Cloudglue API key and service connections |
+| `login` | Browser sign-in — provisions & saves a Cloudglue API key (0.3.10+) |
 
 A few common invocations:
 

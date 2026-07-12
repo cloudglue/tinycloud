@@ -16,7 +16,7 @@ Envelope schema version: `"1"` (reported in `--version --json` as
   "meta": { "elapsed_ms": 1234, "requires": "cloud", "cache": { "identity": "hit" } },
   "summary": "one-line human summary",
   "next": [ { "…": "suggested follow-up commands" } ],
-  "setup": { "service": "cloudglue", "env": ["CLOUDGLUE_API_KEY"], "command": "tinycloud setup cloudglue" },
+  "setup": { "service": "cloudglue", "env": ["CLOUDGLUE_API_KEY"], "command": "tinycloud setup cloudglue", "login_command": "tinycloud login" },
   "resume": { "run_id": "…", "paused_step": "…", "resume_command": "…" },
   "error": { "code": "validation", "message": "…", "retryable": false }
 }
@@ -44,7 +44,7 @@ Envelope schema version: `"1"` (reported in `--version --json` as
 | `ready` | 0 | `data` usable | consume and continue |
 | `pending` | 0 | `meta.job_id` set | `tinycloud jobs wait <id> --timeout 120s --json`; do NOT start downstream work |
 | `paused` | 0 | `resume` present | stop; surface resume info (resume not automated in 0.3.x) |
-| `needs_credentials` | 2 | `setup` present | run `setup.command` or set `setup.env` |
+| `needs_credentials` | 2 | `setup` present | run `setup.command` (or `setup.login_command`, `tinycloud login`, browser sign-in — 0.3.10+) or set `setup.env` |
 | `needs_upload` | 3 | — | cloud upload required (runs through the user's Cloudglue account); rerun without `--no-upload` after confirming |
 | `needs_download` | 3 | — | materialize locally first (`tinycloud grab …`) |
 | `error` | 1 | `error` present | stop; report `error.message`; retry only if `error.retryable` |

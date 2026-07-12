@@ -21,6 +21,7 @@ every verb. Regenerate doubts from it instead of trusting prose.
 | `workflow` | varies | no | Validate/plan/run workflow recipes |
 | `publish` | cloud | yes | Publish HTML/code artifacts as Cloudglue Sites; share videos |
 | `setup` | local | no | Credentials and service connections |
+| `login` | network | no | Browser sign-in → provisions & saves a Cloudglue API key (0.3.10+) |
 
 Cloud verbs run through the configured Cloudglue API key.
 `caption`/`library`/`workflow` vary by what they end up doing.
@@ -426,6 +427,26 @@ tinycloud setup --check --json      # probe configured services (exit 0 always)
 tinycloud setup --list --json       # known services
 tinycloud setup cloudglue --api-key <key>   # or --stdin
 ```
+
+### login — browser sign-in (network, 0.3.10+)
+
+```bash
+tinycloud login [--no-browser] [--web-url <url>] [--label <text>] --json
+```
+
+An OAuth-style **device-authorization** sign-in — the interactive counterpart of
+`tinycloud setup cloudglue --api-key`. It prints a short code + a verification
+URL, best-effort opens the Cloudglue dashboard, and polls until you approve;
+approval mints a normal `cg-` API key that is saved to `~/.tinycloud/config.json`
+(0600) exactly like a pasted key. The **raw key is never printed** — the `ready`
+envelope's `data` carries only `{account, api_base_url, key_masked, config_path,
+replaced_existing}` (progress code + URL go to **stderr**). `--no-browser` prints
+the URL only (SSH/containers); `--web-url` (or `$CLOUDGLUE_WEB_URL`) points at a
+non-default dashboard; `--label` names the provisioned key (default: hostname).
+Revoke by deleting the key in the dashboard. Because it blocks on a
+~10-minute human flow, `login` is a manual/onboarding command — don't script it
+into an agent's tool loop; for headless/automated setup keep using
+`tinycloud setup cloudglue --api-key <key>` or `$CLOUDGLUE_API_KEY`.
 
 ## Shared flags
 

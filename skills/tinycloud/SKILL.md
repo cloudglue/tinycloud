@@ -37,8 +37,9 @@ npm install -g @cloudglue/tinycloud
 ```
 
 Credentials (required for cloud verbs): `tinycloud setup cloudglue --api-key <key>`
-(or `export CLOUDGLUE_API_KEY=...`). Verify with
-`tinycloud setup --check --json` → `data.ok == true`.
+(or `export CLOUDGLUE_API_KEY=...`), or, for a human at a terminal,
+`tinycloud login` (0.3.10+) for browser sign-in that provisions and saves a key.
+Verify with `tinycloud setup --check --json` → `data.ok == true`.
 
 ## 1. The envelope contract
 
@@ -51,7 +52,7 @@ credentials), `error` (`{code, message, retryable}`).
 |---|---|
 | `ready` | consume `data` / `ref` / file paths and continue |
 | `pending` | async job started — `tinycloud jobs wait <meta.job_id> --timeout 120s --json` |
-| `needs_credentials` | run the command in `setup.command` or set the env in `setup.env` |
+| `needs_credentials` | run the command in `setup.command` (or `setup.login_command`, `tinycloud login`, for browser sign-in — 0.3.10+) or set the env in `setup.env` |
 | `needs_upload` | cloud upload required (runs through the user's Cloudglue account) — rerun without `--no-upload` or confirm with the user |
 | `needs_download` | fetch locally first: `tinycloud grab <url> --json` |
 | `paused` | stop; surface `resume` info to the user (resume is not automated in 0.3.x) |
