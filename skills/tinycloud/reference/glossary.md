@@ -39,10 +39,11 @@ connector?" or an envelope field needs explaining.
   `library collections show <col>` until every `files[].status` is `completed`
   before querying.
 - **Data connector** — a linked external source of recordings (Zoom, Grain,
-  Google Drive, Dropbox, Loom, S3/GCS). `tinycloud library connectors …`
-  lists, browses (`files`, with provider-specific filters), and syncs
-  individual items by URI (e.g. `grain://recording/<id>`) so they become
-  Cloudglue files.
+  Gong, Recall, Google Drive, Dropbox, S3/GCS). `tinycloud library connectors …`
+  lists, browses (`files`, with provider-specific filters; rows carry provider
+  metadata on 0.3.11+), peeks one item's provider metadata without syncing
+  (`inspect`, 0.3.11+), and syncs individual items by URI
+  (e.g. `grain://recording/<id>`) so they become Cloudglue files.
 - **Source** — anything a verb accepts as input: a local path, URL,
   `cloudglue://files/<id>` URI, connector URI, collection, or a bare file-id
   UUID (normalized to `cloudglue://files/<id>`; an existing local path of the

@@ -28,16 +28,16 @@ node --test test/unit.test.mjs            # just the unit suite
 TINYCLOUD_TEST_TARBALL=~/Downloads/tinycloud-darwin-arm64.tar.gz npm test   # e2e against a real dist tarball
 
 # Contract smoke tests against an installed/extracted binary
-TINYCLOUD_CMD=/path/to/tinycloud EXPECTED_VERSION=0.3.10 bash scripts/smoke-test.sh
+TINYCLOUD_CMD=/path/to/tinycloud EXPECTED_VERSION=0.3.11 bash scripts/smoke-test.sh
 
 # Serve a tarball as a fake CDN (modes: --corrupt, --no-manifest)
-node test/fixtures/make-fixture-cdn.mjs --tarball <path>.tar.gz --version 0.3.10 --port 8787
+node test/fixtures/make-fixture-cdn.mjs --tarball <path>.tar.gz --version 0.3.11 --port 8787
 TINYCLOUD_DIST_URL=http://127.0.0.1:8787 TINYCLOUD_INSTALL_DIR=$(mktemp -d) node bin/tinycloud.js --version --json
 TINYCLOUD_DIST_URL=http://127.0.0.1:8787 bash install.sh --install-dir $(mktemp -d)/bin
 
 # Release manifest tooling (maintainer)
-node scripts/generate-manifest.mjs --version 0.3.10 --from-cdn   # build manifest + .sha256 sidecars
-node scripts/generate-manifest.mjs --check --version 0.3.10      # verify live CDN matches manifest
+node scripts/generate-manifest.mjs --version 0.3.11 --from-cdn   # build manifest + .sha256 sidecars
+node scripts/generate-manifest.mjs --check --version 0.3.11      # verify live CDN matches manifest
 
 # Plugin metadata validation
 claude plugin validate .
@@ -103,7 +103,7 @@ stdout (logs on stderr) with `status`:
 → exit codes 0/0/2/3/3/0/1. `tinycloud commands --json` is the authoritative
 flag list — verify doc claims against it, not memory (a doc bug shipped once
 because `--cached` only exists on watch/see/extract/caption/face/workflow). As
-of 0.3.10 there are 16 verbs: `see`
+of 0.3.11 there are 16 verbs: `see`
 (0.3.7+) analyzes an **image** (file-level,
 JPEG/PNG/WebP — the image counterpart of `watch`) and `extract` also takes
 an image source (features `see.v1`, `extract.images.v1`); 0.3.8 adds
@@ -117,7 +117,13 @@ touches stdout/envelopes/logs). Unlike the host-level `profile` verb, `login`
 IS a normal command **present in `commands --json`** (cost class `network`,
 `requires_auth: false`) — it is excluded only from the LLM agent's tool set
 (it blocks on a ~10-min interactive flow). Paste-key + `$CLOUDGLUE_API_KEY`
-remain fully supported. The
+remain fully supported. 0.3.11 bumps the bundled Cloudglue SDK to 0.7.19
+(connector source metadata for all six metadata-bearing providers — Grain,
+Zoom, Recall, Google Drive, Dropbox, Gong) and adds `library connectors
+inspect <uri>` (feature `library.connectors.inspect.v1`) — a provider-metadata
+peek that never creates a file — plus per-file provider `metadata` on
+`connectors files` rows; verbs stay 16 (inspect is a `library` subcommand,
+not a verb), features 31→32. The
 host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
@@ -170,9 +176,9 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.10 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0 through 0.3.10, with `manifest.json` + `.sha256`
-  sidecars; `channels.stable` = 0.3.10); all smoke legs are required.
+- The live CDN serves 0.3.11 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0 through 0.3.11, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.11); all smoke legs are required.
 - `publish-npm.yml` (tag `v*`): asserts tag == package.json version → gates
   on `generate-manifest.mjs --check` against the live CDN → publishes via
   npm trusted publishing (OIDC, `id-token: write`, npm ≥ 11.5.1 — no token

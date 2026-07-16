@@ -206,6 +206,7 @@ tinycloud library collections delete <col_id> --json
 tinycloud library collections entities <col_id> <source> [--limit <n>] [--offset <n>] --json   # read a video's entities
 tinycloud library connectors list --json
 tinycloud library connectors files <connector-id> [--limit 25] [--page-token <t>] --json
+tinycloud library connectors inspect [<connector-id>] <uri-or-share-link> --json   # metadata peek, no file created (0.3.11+)
 tinycloud library connectors sync [<connector-id>] <uri-share-link-or-public-url> --json
 ```
 
@@ -250,16 +251,31 @@ Dropbox file share links sync server-side via the connector's OAuth
 (including login-gated links); `zoom.us/rec/share` links resolve best-effort
 (Zoom mints a new token per copy — the recording-detail link is the reliable
 form). Link warnings are advisory and surface in `data.warnings` rather than
-blocking the sync. Non-connector public URLs (direct media URLs, TikTok,
+blocking the sync. Synced files carry provider `source_metadata` (title,
+participants, summary) for Grain, Zoom, Recall, Google Drive, Dropbox, and
+Gong. Non-connector public URLs (direct media URLs, TikTok,
 Loom, public Dropbox links without a connector) sync into a standalone
 Cloudglue file via direct URL ingestion — same command, no connector needed.
 YouTube URLs cannot sync; use `tinycloud grab` instead.
 
 `connectors files` also takes provider-specific filters: `--from`/`--to`
-(Zoom, Grain dates), `--folder-id` (Google Drive), `--path` (Dropbox),
-`--bucket`/`--prefix` (S3/GCS), `--title-search`/`--team`/`--meeting-type`
-(Grain). Collection IDs (`col_…`) are stable; collection names are
+(dates — every provider except S3/GCS; Zoom and Gong default to the last
+6 months), `--folder-id` (Google Drive), `--path` (Dropbox),
+`--bucket`/`--prefix` (S3/GCS — bucket required), `--title-search` (Grain,
+Zoom, Google Drive, Dropbox, Gong), `--team`/`--meeting-type` (Grain).
+Filters a provider can't honor are ignored, and filtered pages can come back
+short or even empty while more remain — keep paging until `next_page_token`
+is null. On 0.3.11+ each row also carries provider `metadata` (participants,
+host, duration, AI summary) when the source exposes it — use it to pick files
+before syncing. Collection IDs (`col_…`) are stable; collection names are
 display-only.
+
+`connectors inspect <uri>` (0.3.11+, feature `library.connectors.inspect.v1`)
+returns one item's provider `source_metadata` WITHOUT materializing a file —
+same URI/share-link forms as sync, connector id optional. S3/GCS objects have
+nothing richer to inspect. On older binaries it fails with an unknown-command
+error — fall back to `connectors sync` (idempotent) and read
+`source_metadata` from the sync envelope instead.
 
 ### jobs — async work
 
