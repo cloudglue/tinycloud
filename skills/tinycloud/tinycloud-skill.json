@@ -1,5 +1,5 @@
 {
-  "skill_version": "0.3.10",
+  "skill_version": "0.3.11",
   "tinycloud": {
     "min_version": "0.3.7",
     "supported_range": ">=0.3.7 <0.4.0",
