@@ -54,7 +54,7 @@ Flags shared by most verbs are listed once at the bottom.
 tinycloud watch <source> [--segment uniform:20|chapters|shots|segments]
   [--shot-min-seconds <s>] [--shot-max-seconds <s>]
   [--profile default|light|custom] [--speech-only | --visual-only]
-  [--start <t>] [--end <t>] [--transcript] [--content] [--json-index]
+  [--start <t>] [--end <t>] [--transcript] [--content]
   [--background]
 ```
 
@@ -64,6 +64,20 @@ or wrong-mode values fail with a validation envelope before any upload. The
 bounds are part of the cache key, so tuned and default shot passes never
 collide. `watch` is **video/audio only** — point it at an image and it errors
 ("watch analyzes video/audio; for an image use `tinycloud see`").
+
+Segments carry the spoken words (0.3.12+): each segment (and embedded shot)
+inlines its overlapping utterances as `speech: string[]`. A source with
+speech but no visual segmentation — an audio file, `--speech-only`, a very
+short or windowed source — gets uniform 20s speech segments synthesized
+(`"segmentation": "uniform:20"`) instead of an empty `segments` list. Caches
+written by older versions heal automatically on the next watch or search.
+
+`--transcript` adds the full transcript as `data.transcript` (speaker-labeled
+when more than one speaker); `--content` inlines the complete describe
+markdown as `data.content`. Both are derived per invocation — they don't
+change the cache key and are served on cache hits, so asking for them never
+re-runs an analysis. `--json-index` was removed in 0.3.12 (it had long been a
+no-op; passing it now errors as an unknown flag).
 
 ### see — analyze an image (cloud, 0.3.7+)
 
@@ -122,6 +136,9 @@ tinycloud search "<keyword>" [--in <paths|source-ids|collection-ids|all>]
 
 Searches cached context locally, including cached `see` image results (0.3.7+),
 so a describe you've already run is greppable without another cloud call.
+`--field speech` matches the utterances inlined on cached watch segments —
+including speech-only/audio watches (0.3.12+; older cache entries heal in
+place during the scan, nothing is re-billed).
 
 ### probe — semantic search (cloud)
 
