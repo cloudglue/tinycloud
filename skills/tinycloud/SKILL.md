@@ -206,9 +206,11 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   `data.embed_snippet` (`<cg-video>`), which only plays on a private site of
   the same account. When writing HTML around an embed, use the component's
   built-ins (`autoplay`+`muted`, `loop`, `start-time`, `exclusive`,
+  `playbackrates` — speed-menu rates, default `1 1.5 2`, shown at every
+  player size; embed v7 —
   `clip-start`/`clip-end` to frame one "back to moment" clip — plus
   `clip-only`, 0.3.8+, to play nothing but that window; JS
-  `playSegment(start, end?)`) and the container components
+  `playSegment(start, end?)`, `playbackRate` get/set) and the container components
   (`<cg-playlist>`, `<cg-grid>`, `<cg-chapters>`) rather than hand-rolled
   players, galleries, or segment-list JS — details in
   [reference/verbs.md](reference/verbs.md).

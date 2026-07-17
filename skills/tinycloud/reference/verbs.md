@@ -390,12 +390,24 @@ When generating custom site HTML around a `<cg-video>` embed, use the
 component's built-ins instead of reinventing them. It defaults to a
 responsive 16:9 dark placeholder (override with plain page CSS on the
 `cg-video` selector); mount-time attributes: `autoplay` (pair with `muted` or
-browsers block it), `loop`, `start-time`, `poster`, `accent-color`, and
+browsers block it), `loop`, `start-time`, `poster`, `accent-color`,
+`playbackrates` (speed menu — next paragraph), and
 `exclusive` (put it on every player in a gallery so starting one pauses the
 rest). Its JS API queues until ready — `playSegment(start, end?)`,
-`seekTo()`, `play()`/`pause()` — and media events are re-dispatched on the
+`seekTo()`, `play()`/`pause()`, `playbackRate` (get/set) — and media events
+are re-dispatched on the
 element (`timeupdate`, `ended`, `cg-ready`); prefer `playSegment` over
 hand-rolled seek logic for "click a moment to play that segment" pages.
+
+Playback speed (sites embed v7): every `<cg-video>` shows a playback-speed
+menu at every player size — including narrow grid cells and phones — with
+default rates `1 1.5 2`. Supply your own list with the space-separated
+`playbackrates` attribute (e.g. `playbackrates="0.5 1 1.5 2"`), and get/set
+the speed from page code via the `playbackRate` JS property (safe to set
+before mount; non-positive and non-numeric values are ignored — the viewer
+can always change it from the menu). The speed menu ships in the
+Cloudglue-served embed script, so it is not gated on a tinycloud version and
+already-published sites pick it up without republishing.
 
 To frame a single moment inside the full recording — a cited highlight you
 want to share on its own — add `clip-start`/`clip-end` (seconds) to a bare
