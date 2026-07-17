@@ -71,7 +71,8 @@ connector?" or an envelope field needs explaining.
   (`status`, `data`, `ref`, `meta`, `error`, …). The machine contract; see
   reference/envelope.md.
 - **Watch context / describe** — the reusable analysis `tinycloud watch`
-  produces (summary, segments, transcript-ish context). Cached locally and
+  produces (summary, segments with their spoken utterances inlined as
+  `speech[]`, transcript-ish context). Cached locally and
   mirrored in Cloudglue, so later `extract`/`ask`/`search` reuse it instead
   of re-analyzing.
 - **See / image describe (0.3.7+)** — the image counterpart of `watch`:
