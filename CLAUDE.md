@@ -28,16 +28,16 @@ node --test test/unit.test.mjs            # just the unit suite
 TINYCLOUD_TEST_TARBALL=~/Downloads/tinycloud-darwin-arm64.tar.gz npm test   # e2e against a real dist tarball
 
 # Contract smoke tests against an installed/extracted binary
-TINYCLOUD_CMD=/path/to/tinycloud EXPECTED_VERSION=0.3.12 bash scripts/smoke-test.sh
+TINYCLOUD_CMD=/path/to/tinycloud EXPECTED_VERSION=0.3.13 bash scripts/smoke-test.sh
 
 # Serve a tarball as a fake CDN (modes: --corrupt, --no-manifest)
-node test/fixtures/make-fixture-cdn.mjs --tarball <path>.tar.gz --version 0.3.12 --port 8787
+node test/fixtures/make-fixture-cdn.mjs --tarball <path>.tar.gz --version 0.3.13 --port 8787
 TINYCLOUD_DIST_URL=http://127.0.0.1:8787 TINYCLOUD_INSTALL_DIR=$(mktemp -d) node bin/tinycloud.js --version --json
 TINYCLOUD_DIST_URL=http://127.0.0.1:8787 bash install.sh --install-dir $(mktemp -d)/bin
 
 # Release manifest tooling (maintainer)
-node scripts/generate-manifest.mjs --version 0.3.12 --from-cdn   # build manifest + .sha256 sidecars
-node scripts/generate-manifest.mjs --check --version 0.3.12      # verify live CDN matches manifest
+node scripts/generate-manifest.mjs --version 0.3.13 --from-cdn   # build manifest + .sha256 sidecars
+node scripts/generate-manifest.mjs --check --version 0.3.13      # verify live CDN matches manifest
 
 # Plugin metadata validation
 claude plugin validate .
@@ -103,7 +103,7 @@ stdout (logs on stderr) with `status`:
 → exit codes 0/0/2/3/3/0/1. `tinycloud commands --json` is the authoritative
 flag list — verify doc claims against it, not memory (a doc bug shipped once
 because `--cached` only exists on watch/see/extract/caption/face/workflow). As
-of 0.3.12 there are 16 verbs: `see`
+of 0.3.13 there are 16 verbs: `see`
 (0.3.7+) analyzes an **image** (file-level,
 JPEG/PNG/WebP — the image counterpart of `watch`) and `extract` also takes
 an image source (features `see.v1`, `extract.images.v1`); 0.3.8 adds
@@ -137,7 +137,16 @@ derived per run, never persisted, excluded from the cache key) and
 and **removes `watch --json-index`** (breaking: now an unknown-flag error).
 Because the speech fix is load-bearing, the skill floor was raised to 0.3.12
 (`min_version`/preflight, the 0.3.7 floor-raise pattern — the dist PR merges
-only after CDN `channels.stable` = 0.3.12). The
+only after CDN `channels.stable` = 0.3.12). 0.3.13 is a docs/prompt parity
+release for **sites embed v7 playback speeds**: every `<cg-video>` gets a
+playback-speed menu at every player size (default rates `1 1.5 2`), authors
+override the list with the space-separated `playbackrates` attribute, and the
+JS API gains a `playbackRate` get/set (settable before mount; non-positive/
+non-numeric ignored). The speed menu lives in the Cloudglue-served embed
+script, not the binary — no new verbs, flags, or feature ids (verbs stay 16,
+features stay 33), the skill floor stays 0.3.12, and already-published sites
+pick it up without republishing; the binary's embed guidance (skill reference,
+kitchen sink, system prompt, publish notes) moved from v6 to v7 wording. The
 host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
@@ -190,9 +199,9 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.12 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0 through 0.3.12, with `manifest.json` + `.sha256`
-  sidecars; `channels.stable` = 0.3.12); all smoke legs are required.
+- The live CDN serves 0.3.13 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0 through 0.3.13, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.13); all smoke legs are required.
 - `publish-npm.yml` (tag `v*`): asserts tag == package.json version → gates
   on `generate-manifest.mjs --check` against the live CDN → publishes via
   npm trusted publishing (OIDC, `id-token: write`, npm ≥ 11.5.1 — no token
