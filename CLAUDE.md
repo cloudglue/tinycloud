@@ -214,9 +214,9 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.13 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0 through 0.3.13, with `manifest.json` + `.sha256`
-  sidecars; `channels.stable` = 0.3.13); all smoke legs are required.
+- The live CDN serves 0.3.14 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0 through 0.3.14, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.14); all smoke legs are required.
 - `publish-npm.yml` (tag `v*`): asserts tag == package.json version → gates
   on `generate-manifest.mjs --check` against the live CDN → publishes via
   npm trusted publishing (OIDC, `id-token: write`, npm ≥ 11.5.1 — no token
