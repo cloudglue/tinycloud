@@ -130,6 +130,16 @@ connector?" or an envelope field needs explaining.
   events re-dispatched on the element) for custom site HTML, and plays
   standalone or inside the container components (`<cg-playlist>`,
   `<cg-grid>`, `<cg-chapters>`) — see reference/verbs.md.
+- **Link preview** — the Open Graph card a platform (Slack, iMessage, Notion,
+  Discord) renders when someone pastes a site or share link. Public sites and
+  shares always preview: a public site's card comes from the `og:*` tags in
+  the HTML you generate, a public share's from its title/description/thumbnail.
+  Private sites and shares are redirected to sign-in before an unfurl bot sees
+  anything, so they render a bare "Sign in" card unless opted in with
+  `--link-preview full` (0.3.14+, feature `publish.link.preview.v1`; private
+  sites also take `--preview-title` / `--preview-image`). Opting in makes those
+  card fields publicly readable — content and playback stay sign-in gated — so
+  ask the user first. See reference/verbs.md.
 - **Discovery components (live API, 0.3.6+)** — the same embed script also
   defines four collection-scoped, **private-site-only** elements that let a
   viewer search or chat inside a published site and play results inline via

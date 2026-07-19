@@ -28,16 +28,16 @@ node --test test/unit.test.mjs            # just the unit suite
 TINYCLOUD_TEST_TARBALL=~/Downloads/tinycloud-darwin-arm64.tar.gz npm test   # e2e against a real dist tarball
 
 # Contract smoke tests against an installed/extracted binary
-TINYCLOUD_CMD=/path/to/tinycloud EXPECTED_VERSION=0.3.13 bash scripts/smoke-test.sh
+TINYCLOUD_CMD=/path/to/tinycloud EXPECTED_VERSION=0.3.14 bash scripts/smoke-test.sh
 
 # Serve a tarball as a fake CDN (modes: --corrupt, --no-manifest)
-node test/fixtures/make-fixture-cdn.mjs --tarball <path>.tar.gz --version 0.3.13 --port 8787
+node test/fixtures/make-fixture-cdn.mjs --tarball <path>.tar.gz --version 0.3.14 --port 8787
 TINYCLOUD_DIST_URL=http://127.0.0.1:8787 TINYCLOUD_INSTALL_DIR=$(mktemp -d) node bin/tinycloud.js --version --json
 TINYCLOUD_DIST_URL=http://127.0.0.1:8787 bash install.sh --install-dir $(mktemp -d)/bin
 
 # Release manifest tooling (maintainer)
-node scripts/generate-manifest.mjs --version 0.3.13 --from-cdn   # build manifest + .sha256 sidecars
-node scripts/generate-manifest.mjs --check --version 0.3.13      # verify live CDN matches manifest
+node scripts/generate-manifest.mjs --version 0.3.14 --from-cdn   # build manifest + .sha256 sidecars
+node scripts/generate-manifest.mjs --check --version 0.3.14      # verify live CDN matches manifest
 
 # Plugin metadata validation
 claude plugin validate .
@@ -103,7 +103,7 @@ stdout (logs on stderr) with `status`:
 → exit codes 0/0/2/3/3/0/1. `tinycloud commands --json` is the authoritative
 flag list — verify doc claims against it, not memory (a doc bug shipped once
 because `--cached` only exists on watch/see/extract/caption/face/workflow). As
-of 0.3.13 there are 16 verbs: `see`
+of 0.3.14 there are 16 verbs: `see`
 (0.3.7+) analyzes an **image** (file-level,
 JPEG/PNG/WebP — the image counterpart of `watch`) and `extract` also takes
 an image source (features `see.v1`, `extract.images.v1`); 0.3.8 adds
@@ -146,8 +146,23 @@ non-numeric ignored). The speed menu lives in the Cloudglue-served embed
 script, not the binary — no new verbs, flags, or feature ids (verbs stay 16,
 features stay 33), the skill floor stays 0.3.12, and already-published sites
 pick it up without republishing; the binary's embed guidance (skill reference,
-kitchen sink, system prompt, publish notes) moved from v6 to v7 wording. The
-host-level `profile` verb and the leading global flags `--home`/`--profile`
+kitchen sink, system prompt, publish notes) moved from v6 to v7 wording.
+0.3.14 adds **opt-in Open Graph link previews** (SDK bumped to 0.7.20; feature
+`publish.link.preview.v1`, features 33→34, verbs stay 16): `publish` and
+`publish video` take `--link-preview none|full`, and site publish also takes
+`--preview-title` / `--preview-image` (validated as an absolute http(s) url
+before any upload). Public sites/shares always unfurl — a public site's card
+comes from the `og:*` tags in the author's own HTML, which is why the embed
+docs now tell generators to emit them on every public publish. Private sites
+and shares are redirected to sign-in before an unfurl bot sees anything, so
+`full` opts them into a metadata-only stub; that makes the card fields
+publicly readable (content, video, tokens, and cookies never leak, and
+playback stays sign-in gated), so every doc surface says to ask the user
+first. Flipping the setting on an existing site is a settings PATCH with no
+re-upload, reported as the new `settings-only` publish action. Because the
+skill teaches the flags, the floor was raised to 0.3.14 (the 0.3.12
+floor-raise pattern — the dist PR merges only after CDN `channels.stable` =
+0.3.14). The host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
 concerns, not video operations.
