@@ -214,6 +214,19 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   (`<cg-playlist>`, `<cg-grid>`, `<cg-chapters>`) rather than hand-rolled
   players, galleries, or segment-list JS — details in
   [reference/verbs.md](reference/verbs.md).
+- Link previews (0.3.14+): how a pasted link unfurls in Slack/iMessage/Notion.
+  A **public** site's card comes from the HTML you generate — put `og:title`,
+  `og:description`, `og:image` (absolute URL — a share's `preview_url` works),
+  `og:url`, and `twitter:card` in the `<head>` of every public page, or the
+  link renders as a bare URL (bots don't run JS; never emit
+  `twitter:player`/`og:video`). A **private** site or share never reaches the
+  bot, so its card is off by default — opt in with `--link-preview full`
+  (private sites also take `--preview-title` / `--preview-image`; a private
+  share reuses its own title, description, and thumbnail). ⚠️ Ask the user
+  before turning it on: it makes those card fields readable by anyone with the
+  link (content and playback stay sign-in gated), and platforms cache per exact
+  URL, so turning it back off does not retract posted cards. Details in
+  [reference/verbs.md](reference/verbs.md).
 - Live-API discovery components (0.3.6+): the same embed script also defines
   collection-scoped, **private-site-only** elements that let viewers search/chat
   inside a published site — `<cg-chat>`, `<cg-search>`, `<cg-deep-search>`,

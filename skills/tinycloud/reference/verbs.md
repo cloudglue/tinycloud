@@ -319,7 +319,8 @@ tinycloud workflow <name> <source> [--param k=v] [--segment <s>] [--out <dir>]
 
 ```bash
 tinycloud publish <html-file-or-dir> [--name <site-name>]
-  [--visibility public|private] --json
+  [--visibility public|private]
+  [--link-preview none|full] [--preview-title <text>] [--preview-image <url>] --json
 tinycloud publish list --json                       # sites for this account, with URLs
 tinycloud publish unpublish <site-ref> --json       # site_id, site name, or the --name label
 ```
@@ -343,11 +344,49 @@ site itself gets a generated name (e.g. `young-fire-2486`) shown by
 `publish list`. `unpublish` resolves any of: the `site_id` UUID, the
 generated site name, or your `--name` label.
 
+**Link previews (0.3.14+, `publish.link.preview.v1`)** — how a pasted link
+unfurls in Slack, iMessage, Notion, Discord. The two visibilities work
+completely differently:
+
+- **Public site** — needs no flags. Its HTML reaches the unfurl bot verbatim,
+  so the card *is* whatever Open Graph tags the page carries. **Emit them in
+  the `<head>` of every public page you generate** — `og:title`,
+  `og:description`, `og:image` (an **absolute** URL — a share's `preview_url`
+  works), `og:url`, `twitter:card` — because a regenerated page without them
+  silently reverts the card to a bare link. Bots don't run JavaScript, so the
+  tags must be in the static HTML. Never emit `twitter:player` or `og:video`
+  (unfurlers ignore them for our domains and can degrade the card).
+- **Private site** — the edge gate redirects bots to sign-in before any HTML
+  is served, so OG tags in the page are never seen and the link unfurls as a
+  bare "Sign in" card. Opt in instead with `--link-preview full`, plus
+  `--preview-title` (falls back to the generated site name) and
+  `--preview-image` (**must be publicly fetchable** — site assets sit behind
+  the same gate the bot can't pass, so use a share's `preview_url`; prefer a
+  long-lived unsigned URL, since unfurl caches hold the exact URL). The card
+  description is the site description. Pass `""` to either flag to clear it.
+
+`--link-preview` is flippable on an **existing** site without republishing
+content: the run reports `action: "settings-only"` (a settings PATCH, no
+re-upload, no new version). The state comes back as `data.link_preview` (plus
+`data.preview_title` / `data.preview_image_url`) and shows in `publish list`
+rows as `link-preview=full`. `--preview-title`/`--preview-image` require
+`--link-preview full`, and a non-absolute `--preview-image` errors before any
+upload.
+
+⚠️ **Ask the user before opting a private site in.** `--link-preview full`
+makes the card title, the site description, and the card image readable by
+anyone who fetches the link — the user-agent check only *routes*; the setting
+is the security boundary. Nothing else leaks (no site content, video, tokens,
+or cookies; the site stays sign-in gated). Platforms cache per exact URL and
+rehost the image, so flipping back to `none` stops *future* unfurls but does
+not retract already-posted cards.
+
 ### publish video — share a video
 
 ```bash
 tinycloud publish video <source> [--visibility public|private]   # default public
-  [--name <title>] [--segment-id <id>] [--clip-start <s> --clip-end <e> [--clip-only]] --json
+  [--name <title>] [--segment-id <id>] [--clip-start <s> --clip-end <e> [--clip-only]]
+  [--link-preview none|full] --json
 tinycloud publish video list [--in <source>] [--visibility public|private] --json
 tinycloud publish video unpublish <share-id | source> --json   # --visibility disambiguates
 ```
@@ -385,6 +424,16 @@ feature id.
   `&clip=hard` and fall back to the soft window. It shapes the viewing
   experience, not access control — anyone with the bare `share_url` still has
   the whole video; restrict access with `--visibility private`.
+- Link previews (0.3.14+): a PUBLIC share page always unfurls in Slack with a
+  card built from its title, description, and thumbnail. A PRIVATE share is
+  redirected to sign-in before the bot sees anything, so it unfurls as a bare
+  "Sign in" card unless you pass `--link-preview full`, which serves bots a
+  metadata-only stub built from those same three fields. It comes back as
+  `data.share.link_preview`, and re-running flips it on an existing share
+  (a PATCH — no new share). Playback stays sign-in gated in every mode.
+  ⚠️ Ask the user first: `full` makes the share's title, description, and
+  thumbnail readable by anyone who fetches the link, and platforms cache per
+  exact URL, so turning it back off does not retract already-posted cards.
 
 When generating custom site HTML around a `<cg-video>` embed, use the
 component's built-ins instead of reinventing them. It defaults to a
