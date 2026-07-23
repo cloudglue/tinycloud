@@ -177,7 +177,8 @@ processing configs (create rejects `--prompt`/`--schema`), queried via
 `probe --filter "<path[op]value>"` (repeatable, ANDed, collection scopes
 only; ops `=` `!=` `>` `<` `~=` LIKE `*=` contains-any `&=` contains-all
 `^=` in; path prefixes route to source_metadata/metadata/video_info/file
-buckets, `file.*` stripped to the bare column) filters before semantic
+buckets, `video_info.*`/`file.*` stripped to the bare field the schema
+enums) filters before semantic
 ranking (feature `probe.filters.v1`); and `library connectors refresh
 <file-id|uri>` re-fetches an existing file's source_metadata from its
 connector and re-indexes its metadata collections — free (feature
