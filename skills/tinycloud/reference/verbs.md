@@ -149,10 +149,9 @@ tinycloud probe "<query>" --in collection:col_… --scope file \
 ```
 
 `--filter <path[op]value>` (0.3.15+, feature `probe.filters.v1`; repeatable,
-ANDed, collection scopes only) narrows the searched set by stored fields.
-A filtered probe runs a single-pass hybrid search over the collection
-(deterministic, cheaper) instead of the agentic multi-query deep search, so
-`data.summary` is null on that path — read `data.results`.
+ANDed, collection scopes only) narrows the searched set by stored fields
+before semantic ranking. Criteria are ANDed — with each other and with any
+filters the search plans itself — so they can only narrow results.
 Ops: `=` `!=` `>` `<` `~=` (SQL LIKE, `%` wildcards)
 `*=` (contains any of `a,b`) `&=` (contains all) `^=` (in). Path prefixes
 route the filter: `source_metadata.*` (connector-provided fields — e.g.
