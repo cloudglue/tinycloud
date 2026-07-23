@@ -28,16 +28,16 @@ node --test test/unit.test.mjs            # just the unit suite
 TINYCLOUD_TEST_TARBALL=~/Downloads/tinycloud-darwin-arm64.tar.gz npm test   # e2e against a real dist tarball
 
 # Contract smoke tests against an installed/extracted binary
-TINYCLOUD_CMD=/path/to/tinycloud EXPECTED_VERSION=0.3.14 bash scripts/smoke-test.sh
+TINYCLOUD_CMD=/path/to/tinycloud EXPECTED_VERSION=0.3.15 bash scripts/smoke-test.sh
 
 # Serve a tarball as a fake CDN (modes: --corrupt, --no-manifest)
-node test/fixtures/make-fixture-cdn.mjs --tarball <path>.tar.gz --version 0.3.14 --port 8787
+node test/fixtures/make-fixture-cdn.mjs --tarball <path>.tar.gz --version 0.3.15 --port 8787
 TINYCLOUD_DIST_URL=http://127.0.0.1:8787 TINYCLOUD_INSTALL_DIR=$(mktemp -d) node bin/tinycloud.js --version --json
 TINYCLOUD_DIST_URL=http://127.0.0.1:8787 bash install.sh --install-dir $(mktemp -d)/bin
 
 # Release manifest tooling (maintainer)
-node scripts/generate-manifest.mjs --version 0.3.14 --from-cdn   # build manifest + .sha256 sidecars
-node scripts/generate-manifest.mjs --check --version 0.3.14      # verify live CDN matches manifest
+node scripts/generate-manifest.mjs --version 0.3.15 --from-cdn   # build manifest + .sha256 sidecars
+node scripts/generate-manifest.mjs --check --version 0.3.15      # verify live CDN matches manifest
 
 # Plugin metadata validation
 claude plugin validate .
@@ -103,7 +103,7 @@ stdout (logs on stderr) with `status`:
 → exit codes 0/0/2/3/3/0/1. `tinycloud commands --json` is the authoritative
 flag list — verify doc claims against it, not memory (a doc bug shipped once
 because `--cached` only exists on watch/see/extract/caption/face/workflow). As
-of 0.3.14 there are 16 verbs: `see`
+of 0.3.15 there are 16 verbs: `see`
 (0.3.7+) analyzes an **image** (file-level,
 JPEG/PNG/WebP — the image counterpart of `watch`) and `extract` also takes
 an image source (features `see.v1`, `extract.images.v1`); 0.3.8 adds
@@ -162,7 +162,29 @@ first. Flipping the setting on an existing site is a settings PATCH with no
 re-upload, reported as the new `settings-only` publish action. Because the
 skill teaches the flags, the floor was raised to 0.3.14 (the 0.3.12
 floor-raise pattern — the dist PR merges only after CDN `channels.stable` =
-0.3.14). The host-level `profile` verb and the leading global flags `--home`/`--profile`
+0.3.14). 0.3.15 picks up SDK 0.7.21 (spec v0.7.11) — **Iconik connector,
+metadata collections, and source-metadata search** (features 34→38, verbs
+stay 16): Iconik becomes the seventh metadata-bearing provider
+(`iconik://asset/<id>` URIs on `connectors sync`/`inspect`, `--from/--to` on
+asset date_created and `--title-search` on `connectors files`, custom
+metadata-view fields under `source_metadata.iconik_metadata.<Field>`;
+feature `library.connectors.iconik.v1`); `library collections create --type
+metadata` makes a metadata collection that indexes connector source_metadata
++ user metadata (new `collections add --metadata '<json|file.json>'`) into
+file-level search documents WITHOUT processing media — free to index, no
+processing configs (create rejects `--prompt`/`--schema`), queried via
+`probe --scope file`/`ask` (feature `library.collections.metadata.v1`);
+`probe --filter "<path[op]value>"` (repeatable, ANDed, collection scopes
+only; ops `=` `!=` `>` `<` `~=` LIKE `*=` contains-any `&=` contains-all
+`^=` in; path prefixes route to source_metadata/metadata/video_info/file
+buckets, `file.*` stripped to the bare column) filters before semantic
+ranking (feature `probe.filters.v1`); and `library connectors refresh
+<file-id|uri>` re-fetches an existing file's source_metadata from its
+connector and re-indexes its metadata collections — free (feature
+`library.connectors.refresh.v1`; refresh takes a SOURCE, unlike
+inspect/sync which take `[connector-id] <uri>`). Because the skill teaches
+the new flags/subcommands, the floor was raised to 0.3.15 (same
+merge-after-CDN gate). The host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
 concerns, not video operations.

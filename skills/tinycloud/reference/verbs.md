@@ -144,7 +144,29 @@ place during the scan, nothing is re-billed).
 
 ```bash
 tinycloud probe "<query>" --in collection:col_… [--scope file|segment] [--limit 20]
+tinycloud probe "<query>" --in collection:col_… --scope file \
+  --filter "source_metadata.host_email=kevin@acme.com" --filter "source_metadata.tags*=demo,intro"
 ```
+
+`--filter <path[op]value>` (0.3.15+, feature `probe.filters.v1`; repeatable,
+ANDed, collection scopes only) narrows the searched set by stored fields.
+A filtered probe runs a single-pass hybrid search over the collection
+(deterministic, cheaper) instead of the agentic multi-query deep search, so
+`data.summary` is null on that path — read `data.results`.
+Ops: `=` `!=` `>` `<` `~=` (SQL LIKE, `%` wildcards)
+`*=` (contains any of `a,b`) `&=` (contains all) `^=` (in). Path prefixes
+route the filter: `source_metadata.*` (connector-provided fields — e.g.
+`source_metadata.topic` for Zoom, `source_metadata.title` for
+Gong/Grain/Iconik, `source_metadata.parties.email` for Gong,
+`source_metadata.participants.name` for Grain,
+`source_metadata.iconik_metadata.<Field>` for Iconik custom fields — paths
+through arrays match when ANY element matches; ISO datetime fields compare as
+strings with `<`/`>`), `metadata.*` (user metadata from `collections add
+--metadata`), `video_info.duration_seconds|has_audio`, and
+`file.filename|bytes|uri|created_at|id`. source_metadata filters are
+file-level facts — pair them with `--scope file`. Probing a `metadata`
+collection requires `--scope file` (its documents are file-level; segment
+scope errors).
 
 ### ask — grounded Q&A (cloud)
 
@@ -216,14 +238,15 @@ tinycloud library collections list --json
 tinycloud library collections show <col_id> --json     # files[].status: pending|processing|completed (readiness)
 tinycloud library collections sync <col_id> --artifacts descriptions,transcripts,thumbnails,metadata --json
 # Collection writes (0.3.4+) — the only write paths in library:
-tinycloud library collections create <name> [--type media-descriptions|entities|rich-transcripts|face-analysis] [--description <text>] [--prompt <text> | --schema <file>] --json
-tinycloud library collections add <source> --to <col_id> [--no-upload] [--no-download] --json
+tinycloud library collections create <name> [--type media-descriptions|entities|rich-transcripts|face-analysis|metadata] [--description <text>] [--prompt <text> | --schema <file>] --json
+tinycloud library collections add <source> --to <col_id> [--metadata '<json|file.json>'] [--no-upload] [--no-download] --json
 tinycloud library collections remove <source> --from <col_id> --json
 tinycloud library collections delete <col_id> --json
 tinycloud library collections entities <col_id> <source> [--limit <n>] [--offset <n>] --json   # read a video's entities
 tinycloud library connectors list --json
 tinycloud library connectors files <connector-id> [--limit 25] [--page-token <t>] --json
 tinycloud library connectors inspect [<connector-id>] <uri-or-share-link> --json   # metadata peek, no file created (0.3.11+)
+tinycloud library connectors refresh <file-id|cloudglue-uri|connector-url> --json  # re-fetch stored source_metadata (0.3.15+)
 tinycloud library connectors sync [<connector-id>] <uri-share-link-or-public-url> --json
 ```
 
@@ -231,10 +254,15 @@ tinycloud library connectors sync [<connector-id>] <uri-share-link-or-public-url
 read-only `library` (gated by the `library.collections.create.v1` /
 `library.collections.mutate.v1` feature ids). `create` defaults to
 `--type media-descriptions`; an `entities` collection also needs an extraction
-spec — `--prompt <text>` or `--schema <file.json>` — or `create` errors. `add`
+spec — `--prompt <text>` or `--schema <file.json>` — or `create` errors, and a
+`metadata` collection takes NO processing configs (`create` rejects
+`--prompt`/`--schema`). `add`
 (`--to <col>`, or `--collection`) resolves the source like `watch`/`extract` —
 a local file uploads first (or `needs_upload` with `--no-upload`) — and records
-the file→collection mapping; `remove` (`--from <col>`) takes a Cloudglue file
+the file→collection mapping; `--metadata '<json|file.json>'` (0.3.15+)
+attaches a JSON object of user metadata to the added file, which metadata
+collections index next to the connector's `source_metadata`. `remove`
+(`--from <col>`) takes a Cloudglue file
 id/uri; `delete` removes the whole collection (and cleans the local mirror).
 Collection ids accept a bare uuid, a `col_…` slug, or `collection:<id>` /
 `cloudglue://collections/<id>` forms, consistently across read and write paths.
@@ -253,33 +281,50 @@ same `create → add → poll show → query → delete` lifecycle):
 | `face-analysis` | `face list` / `face search` |
 | `entities` (needs `--prompt`/`--schema`) | `library collections entities <col> <source>` |
 | `rich-transcripts` | `collections sync --artifacts transcripts` |
+| `metadata` (0.3.15+, free) | `probe --scope file` / `ask` |
 
 `collections entities <col> <source>` returns a video's extracted entities
 (video- and segment-level, `--limit`/`--offset`) from an `entities` collection.
 For a one-off per-video pull without standing up a collection, `extract` returns
 entities/facts directly (free-form query or `--schema`).
 
+**Metadata collections** (0.3.15+, feature `library.collections.metadata.v1`)
+index connector `source_metadata` plus user `--metadata` fields into
+file-level search documents WITHOUT downloading or processing the media —
+indexing is free and near-instant (no describe/transcribe jobs, so `add`
+readiness is quick). Add google-drive, dropbox, zoom, gong, recall, grain, or
+iconik URIs/share links (or already-synced files) and query with
+`probe --scope file` (segment scope errors) or `ask`, using `--filter` on
+`source_metadata.*`/`metadata.*` paths to narrow. Use one to triage a large
+connector library (titles, participants, dates, tags) before paying for full
+processing in a `media-descriptions` collection.
+
 `connectors sync` materializes its argument into a Cloudglue file without
 starting analysis (idempotent). The connector id is optional — with just a
 URI or link, sync routes through the matching connector type. Connector URIs
 (`grain://recording/<id>`, `gdrive://file/<id>`, `dropbox://<path>`,
-`zoom://uuid/<uuid>`, `s3://<bucket>/<key>`, …) and share links are accepted:
+`zoom://uuid/<uuid>`, `iconik://asset/<id>` (0.3.15+), `s3://<bucket>/<key>`,
+…) and share links are accepted:
 Dropbox file share links sync server-side via the connector's OAuth
 (including login-gated links); `zoom.us/rec/share` links resolve best-effort
 (Zoom mints a new token per copy — the recording-detail link is the reliable
 form). Link warnings are advisory and surface in `data.warnings` rather than
 blocking the sync. Synced files carry provider `source_metadata` (title,
-participants, summary) for Grain, Zoom, Recall, Google Drive, Dropbox, and
-Gong. Non-connector public URLs (direct media URLs, TikTok,
+participants, summary) for Grain, Zoom, Recall, Google Drive, Dropbox, Gong,
+and — on 0.3.15+ — Iconik (whose `source_metadata.iconik_metadata.<Field>`
+carries custom metadata-view fields). Non-connector public URLs (direct media
+URLs, TikTok,
 Loom, public Dropbox links without a connector) sync into a standalone
 Cloudglue file via direct URL ingestion — same command, no connector needed.
 YouTube URLs cannot sync; use `tinycloud grab` instead.
 
 `connectors files` also takes provider-specific filters: `--from`/`--to`
 (dates — every provider except S3/GCS; Zoom and Gong default to the last
-6 months), `--folder-id` (Google Drive), `--path` (Dropbox),
+6 months; Iconik filters on asset date_created), `--folder-id` (Google
+Drive), `--path` (Dropbox),
 `--bucket`/`--prefix` (S3/GCS — bucket required), `--title-search` (Grain,
-Zoom, Google Drive, Dropbox, Gong), `--team`/`--meeting-type` (Grain).
+Zoom, Google Drive, Dropbox, Gong, Iconik), `--team`/`--meeting-type`
+(Grain).
 Filters a provider can't honor are ignored, and filtered pages can come back
 short or even empty while more remain — keep paging until `next_page_token`
 is null. On 0.3.11+ each row also carries provider `metadata` (participants,
@@ -293,6 +338,18 @@ same URI/share-link forms as sync, connector id optional. S3/GCS objects have
 nothing richer to inspect. On older binaries it fails with an unknown-command
 error — fall back to `connectors sync` (idempotent) and read
 `source_metadata` from the sync envelope instead.
+
+`connectors refresh <source>` (0.3.15+, feature
+`library.connectors.refresh.v1`) re-fetches an EXISTING file's
+`source_metadata` live from its connector, updates the stored value, and
+re-indexes any metadata collections the file belongs to — free, no media
+downloaded. It takes a file id / `cloudglue://files/<id>` URI / synced
+connector URL (not a connector id); only connector-synced files have provider
+metadata to refresh. Use it when a recording's title/participants changed
+upstream or a metadata collection is serving stale fields. On older binaries
+it fails with an unknown-command error — re-running `connectors sync` on the
+original URI is the closest (idempotent) fallback, though it does not
+re-index metadata collections.
 
 ### jobs — async work
 

@@ -31,19 +31,36 @@ connector?" or an envelope field needs explaining.
   sales calls". Verbs scope to one with `--in collection:col_…`. Collection
   ids are stable; display names are not. A collection has a type that decides
   which verb reads it: `media-descriptions` (default) backs `ask`/`probe`/`search`,
-  `face-analysis` backs `face list`/`face search`, and `entities` (created with
-  `--prompt`/`--schema`) backs `library collections entities` (`rich-transcripts`
+  `face-analysis` backs `face list`/`face search`, `entities` (created with
+  `--prompt`/`--schema`) backs `library collections entities`, and `metadata`
+  (0.3.15+) backs `probe --scope file`/`ask` (`rich-transcripts`
   also exists). Manage them with `library collections create|add|remove|delete`
   (0.3.4+); every type follows `create → add → poll show → query → delete`. `add`
   enriches each file asynchronously and returns `pending` — poll
   `library collections show <col>` until every `files[].status` is `completed`
   before querying.
+- **Metadata collection (0.3.15+)** — a `--type metadata` collection that
+  indexes connector `source_metadata` plus user metadata (`collections add
+  --metadata '<json>'`) into file-level search documents WITHOUT downloading
+  or processing the media — free to index, no processing configs. Query with
+  `probe --scope file` (optionally `--filter` on `source_metadata.*` /
+  `metadata.*` paths) or `ask`; feature id `library.collections.metadata.v1`.
+- **Source metadata** — the provider-supplied fields a connector attaches to
+  a synced file (`source_metadata`: title, participants, dates, tags, AI
+  summary; Iconik adds `iconik_metadata.<Field>` custom fields). Peek it
+  without creating a file (`connectors inspect`), re-fetch it for an existing
+  file (`connectors refresh`, 0.3.15+ — also re-indexes metadata
+  collections), and filter searches on it (`probe --filter
+  "source_metadata.…"`, 0.3.15+).
 - **Data connector** — a linked external source of recordings (Zoom, Grain,
-  Gong, Recall, Google Drive, Dropbox, S3/GCS). `tinycloud library connectors …`
+  Gong, Recall, Google Drive, Dropbox, Iconik (0.3.15+), S3/GCS).
+  `tinycloud library connectors …`
   lists, browses (`files`, with provider-specific filters; rows carry provider
   metadata on 0.3.11+), peeks one item's provider metadata without syncing
-  (`inspect`, 0.3.11+), and syncs individual items by URI
-  (e.g. `grain://recording/<id>`) so they become Cloudglue files.
+  (`inspect`, 0.3.11+), re-fetches an existing file's stored metadata
+  (`refresh`, 0.3.15+), and syncs individual items by URI
+  (e.g. `grain://recording/<id>`, `iconik://asset/<id>`) so they become
+  Cloudglue files.
 - **Source** — anything a verb accepts as input: a local path, URL,
   `cloudglue://files/<id>` URI, connector URI, collection, or a bare file-id
   UUID (normalized to `cloudglue://files/<id>`; an existing local path of the
