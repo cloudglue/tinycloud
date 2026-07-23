@@ -89,6 +89,8 @@ tinycloud caption ./demo.mp4 --format srt --transcript -o ./tinycloud-output/cap
 # Find things: local keyword search vs cloud semantic search vs Q&A
 tinycloud search "pricing" --in ./demo.mp4 --json
 tinycloud probe "product demo moments" --in collection:col_123 --scope segment --limit 5 --json
+tinycloud probe "renewal call" --in collection:col_123 --scope file \
+  --filter "source_metadata.parties.email~=%@acme.com" --json   # filter by stored fields (0.3.15+)
 tinycloud ask "What objections came up?" --in ./demo.mp4 --json
 
 # Local editing (free, ffmpeg-backed)
@@ -110,15 +112,22 @@ tinycloud jobs wait <job-id> --timeout 120s --json
 # Collections (0.3.4+) — turn videos into a reusable, queryable knowledge base.
 # Lifecycle (every --type): create → add → poll show → query → delete.
 tinycloud library collections list --json
-tinycloud library collections create my-desc --type media-descriptions --json  # types: media-descriptions | face-analysis | entities (--prompt) | rich-transcripts
+tinycloud library collections create my-desc --type media-descriptions --json  # types: media-descriptions | face-analysis | entities (--prompt) | rich-transcripts | metadata (0.3.15+)
 tinycloud library collections add ./demo.mp4 --to col_desc --json              # uploads a local source first; enrichment is async (pending)
 tinycloud library collections show col_desc --json                            # poll files[].status until completed, then query —
 # the collection's --type decides the read verb (each line below is a DIFFERENT, matching-type collection):
 tinycloud ask "what's discussed?" --in collection:col_desc --json             #   media-descriptions → ask / probe / search
 tinycloud face search ./person.jpg --in collection:col_faces --json           #   face-analysis      → face list / face search
 tinycloud library collections entities col_ents ./demo.mp4 --json             #   entities           → collections entities
+tinycloud probe "kickoff" --in collection:col_meta --scope file --json        #   metadata (free, no processing) → probe --scope file / ask
 tinycloud library collections remove cloudglue://files/<id> --from col_desc --json
 tinycloud library collections delete col_desc --json
+
+# Metadata collections (0.3.15+) — index connector source_metadata + user
+# metadata into file-level search docs WITHOUT processing media (free):
+tinycloud library collections create meetings --type metadata --json
+tinycloud library collections add zoom://uuid/<uuid> --to col_meta --metadata '{"deal":"acme"}' --json
+tinycloud library connectors refresh cloudglue://files/<id> --json   # re-fetch stale source_metadata, re-index (free)
 
 # Publish an HTML artifact to Cloudglue Sites (manage with list / unpublish)
 tinycloud publish ./tinycloud-output/html/report.html --name report --visibility private --json
@@ -186,6 +195,10 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   added to collections. Local `search` can match cached `see` results.
 - Do not pass `--background` to `ask`; background jobs exist only for tracked
   async ops (`watch`, `see`, `extract`).
+- `probe --filter` works only with a collection scope (`--in
+  collection:col_…`), and a `metadata` collection is file-level — probe it
+  with `--scope file` (segment scope errors). `source_metadata.*` filters are
+  file-level facts too, so pair them with `--scope file`.
 - `workflow status` / `workflow resume` are not implemented in 0.3.x; treat
   `paused`/`partial` as terminal and surface `resume` metadata to the user.
 - `--no-upload` / `--no-download` make commands refuse cloud upload / local
