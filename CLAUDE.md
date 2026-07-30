@@ -185,7 +185,30 @@ connector and re-indexes its metadata collections — free (feature
 `library.connectors.refresh.v1`; refresh takes a SOURCE, unlike
 inspect/sync which take `[connector-id] <uri>`). Because the skill teaches
 the new flags/subcommands, the floor was raised to 0.3.15 (same
-merge-after-CDN gate). The host-level `profile` verb and the leading global flags `--home`/`--profile`
+merge-after-CDN gate). 0.3.16 is an envelope-truth and collections release
+(features 38→40, verbs stay 16), fixing the failure modes a live agent
+session surfaced: `watch`'s `data.segmentation` now reports the segmentation
+that actually produced `segments[]` (shots/chapters runs were mislabeled
+`uniform:20`, manufacturing a phantom "silent fallback" — the synthesized
+speech-only label is unchanged), a shots run over cut-less footage that
+max-caps every window gets an explanatory `data.segmentation_note`, and
+per-verb `--help` names every shared flag per group (`[cache: --refresh
+--no-cache …]`) instead of the "[common output/cache/source options]"
+placeholder that hid the cache flags from grepping agents. `library
+collections create` gains `--describe full|speech|light|<comma-list>`
+(feature `library.collections.describe.v1`; media-descriptions only) because
+the Cloudglue API default indexes speech+summary ONLY and the choice is
+immutable post-create — `collections show` now surfaces `describe_config`,
+and the create summary names the indexed modalities. Collections listings
+switch to the API's real offset pagination (feature
+`library.collections.pagination.v1`): `show` returns `data.total` plus a
+working `has_more`/`next_page_token` (numeric offset cursors accepted via
+`--page-token`), pagination cursors are exempt from the `_token` secret
+redaction that shipped the literal `[redacted]` where the cursor belonged,
+and `collections sync` mirrors no longer silently truncate at 100 files
+(pre-0.3.16, every listing was the first 50 rows with `has_more: false`).
+Because the skill teaches `--describe` and show pagination, the floor was
+raised to 0.3.16 (same merge-after-CDN gate). The host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
 concerns, not video operations.

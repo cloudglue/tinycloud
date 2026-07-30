@@ -65,6 +65,17 @@ bounds are part of the cache key, so tuned and default shot passes never
 collide. `watch` is **video/audio only** — point it at an image and it errors
 ("watch analyzes video/audio; for an image use `tinycloud see`").
 
+`data.segmentation` reports the segmentation that actually produced
+`segments[]` (0.3.16+ — earlier binaries mislabeled shots/chapters runs as
+`uniform:20`; on those, trust `data.describe.primary_segmentation` instead).
+On footage with no detectable cuts (talks, screencasts, locked-off cameras) a
+shots run degenerates to max-duration windows — every shot hits
+`--shot-max-seconds` (default 300), so boundaries land on exact multiples.
+That is shot detection working on cut-less footage, **not** a fallback to
+uniform; 0.3.16+ flags it in `data.segmentation_note`. Re-runs are served
+from cache — `--refresh` recomputes and `--no-cache` bypasses (no `--home`
+workarounds needed).
+
 Segments carry the spoken words (0.3.12+): each segment (and embedded shot)
 inlines its overlapping utterances as `speech: string[]`. A source with
 speech but no visual segmentation — an audio file, `--speech-only`, a very
@@ -234,10 +245,10 @@ finds the query face across one or more collections (`--min-score`,
 
 ```bash
 tinycloud library collections list --json
-tinycloud library collections show <col_id> --json     # files[].status: pending|processing|completed (readiness)
+tinycloud library collections show <col_id> [--limit <n>] [--page-token <t>] --json   # files[].status: pending|processing|completed (readiness)
 tinycloud library collections sync <col_id> --artifacts descriptions,transcripts,thumbnails,metadata --json
 # Collection writes (0.3.4+) — the only write paths in library:
-tinycloud library collections create <name> [--type media-descriptions|entities|rich-transcripts|face-analysis|metadata] [--description <text>] [--prompt <text> | --schema <file>] --json
+tinycloud library collections create <name> [--type media-descriptions|entities|rich-transcripts|face-analysis|metadata] [--describe full|speech|light|<comma-list>] [--description <text>] [--prompt <text> | --schema <file>] --json
 tinycloud library collections add <source> --to <col_id> [--metadata '<json|file.json>'] [--no-upload] [--no-download] --json
 tinycloud library collections remove <source> --from <col_id> --json
 tinycloud library collections delete <col_id> --json
@@ -255,7 +266,20 @@ read-only `library` (gated by the `library.collections.create.v1` /
 `--type media-descriptions`; an `entities` collection also needs an extraction
 spec — `--prompt <text>` or `--schema <file.json>` — or `create` errors, and a
 `metadata` collection takes NO processing configs (`create` rejects
-`--prompt`/`--schema`). `add`
+`--prompt`/`--schema`).
+
+**A media-descriptions collection indexes only the modalities chosen at
+create time, and the API default is speech+summary ONLY** — no visual scene
+descriptions, no scene text — so visual `probe`/`ask` queries over a
+default-created collection come back empty. `--describe` (0.3.16+, feature
+`library.collections.describe.v1`) picks the modalities: `full`
+(speech+visual+scene-text+audio+summary — matches a standalone `watch`),
+`speech` (the API default, explicit), `light` (speech+visual+summary), or a
+comma list from `speech,visual,scene-text,audio,summary`. The choice is
+**immutable after create** (the API ignores config updates), so pass
+`--describe full` up front when visual search matters; `collections show`
+reports the collection's `describe_config`, and the create summary names the
+indexed modalities. `add`
 (`--to <col>`, or `--collection`) resolves the source like `watch`/`extract` —
 a local file uploads first (or `needs_upload` with `--no-upload`) — and records
 the file→collection mapping; `--metadata '<json|file.json>'` (0.3.15+)
@@ -270,6 +294,12 @@ Collection ids accept a bare uuid, a `col_…` slug, or `collection:<id>` /
 asynchronously and returns `pending`. Poll `collections show <col> --json` and
 wait until every `files[].status` is `completed` (`pending → processing →
 completed`; `failed` is terminal) — a query before then returns empty or errors.
+
+`collections show` lists ONE page of files (default 50) with `data.total`,
+`has_more`, and `next_page_token` — page with `--page-token` until the token
+is null (0.3.16+, feature `library.collections.pagination.v1`; earlier
+binaries capped every listing at 50 with a wrong `has_more: false` and a
+redacted token, so a >50-file collection could not be enumerated).
 
 The collection's `--type` decides which verb reads it (every type follows the
 same `create → add → poll show → query → delete` lifecycle):
