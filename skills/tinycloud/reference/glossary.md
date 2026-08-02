@@ -45,6 +45,18 @@ connector?" or an envelope field needs explaining.
   or processing the media — free to index, no processing configs. Query with
   `probe --scope file` (optionally `--filter` on `source_metadata.*` /
   `metadata.*` paths) or `ask`; feature id `library.collections.metadata.v1`.
+- **Structured query (0.3.17+)** — an analytical read-only SQL `SELECT` (or a
+  natural-language question compiled to SQL server-side) run by `tinycloud
+  query` over a collection's structured data; features `query.v1` /
+  `query.export.v1`. Complements semantic search: `probe`/`ask` FIND
+  content, `query` MEASURES it (counts, group-bys, joins). Runs are stored
+  (`query list`/`show`) and large results export to gzipped CSV/JSONL.
+- **Virtual tables** — the three per-request tables a structured query sees:
+  `files` (one row per file+collection: attributes plus `metadata` and
+  `source_metadata` JSON columns), `entities` (file-level extracted fields),
+  and `segment_entities` (segment-level entities with timestamps). Built from
+  each file's most recent completed extraction; discover the exact columns
+  and extracted fields with `tinycloud query schema --in collection:col_…`.
 - **Source metadata** — the provider-supplied fields a connector attaches to
   a synced file (`source_metadata`: title, participants, dates, tags, AI
   summary; Iconik adds `iconik_metadata.<Field>` custom fields). Peek it

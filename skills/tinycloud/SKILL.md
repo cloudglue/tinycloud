@@ -64,8 +64,8 @@ Full schema and error codes: [reference/envelope.md](reference/envelope.md).
 
 ## 2. Core verbs (cheat sheet)
 
-Cloud verbs (`watch see extract probe ask publish face`) call the Cloudglue API
-using the configured key — usage is billed per the
+Cloud verbs (`watch see extract probe ask query publish face`) call the
+Cloudglue API using the configured key — usage is billed per the
 [rate card](https://app.cloudglue.dev/home/billing/rate-card). `search clip
 setup` are local and free; `grab jobs` are network-only.
 `tinycloud commands --json` is the authoritative command/flag list.
@@ -92,6 +92,15 @@ tinycloud probe "product demo moments" --in collection:col_123 --scope segment -
 tinycloud probe "renewal call" --in collection:col_123 --scope file \
   --filter "source_metadata.parties.email~=%@acme.com" --json   # filter by stored fields (0.3.15+)
 tinycloud ask "What objections came up?" --in ./demo.mp4 --json
+
+# MEASURE things (0.3.17+): analytics over collection structured data — SQL or plain English.
+# probe/ask FIND content; query COUNTS/GROUPS/JOINS it (files + entities + metadata).
+tinycloud query schema --in collection:col_123 --json                  # always first: tables + extracted fields
+tinycloud query "how many videos per source platform?" --in collection:col_123 --json   # NL → SQL (compiled stmt in data.sql)
+tinycloud query --sql "SELECT source, COUNT(*) AS n FROM files GROUP BY source ORDER BY n DESC" \
+  --in collection:col_123 --json                                       # SQL directly (cheaper)
+tinycloud query --sql "SELECT * FROM files ORDER BY filename" --in collection:col_123 \
+  --export csv --json                                                  # full result → gzipped download
 
 # Local editing (free, ffmpeg-backed)
 tinycloud clip info ./demo.mp4 --json
@@ -123,6 +132,7 @@ tinycloud ask "what's discussed?" --in collection:col_desc --json             # 
 tinycloud face search ./person.jpg --in collection:col_faces --json           #   face-analysis      → face list / face search
 tinycloud library collections entities col_ents ./demo.mp4 --json             #   entities           → collections entities
 tinycloud probe "kickoff" --in collection:col_meta --scope file --json        #   metadata (free, no processing) → probe --scope file / ask
+tinycloud query "top entities by file count?" --in collection:col_ents --json #   ANY type → query for analytics (count/group/join, 0.3.17+)
 tinycloud library collections remove cloudglue://files/<id> --from col_desc --json
 tinycloud library collections delete col_desc --json
 
@@ -202,6 +212,18 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   collection:col_…`), and a `metadata` collection is file-level — probe it
   with `--scope file` (segment scope errors). `source_metadata.*` filters are
   file-level facts too, so pair them with `--scope file`.
+- `query` (0.3.17+) is for analytics, not search: when the task is to COUNT,
+  GROUP, rank, or join across a collection ("how many…", "which … most",
+  "total hours per host"), reach for `query`, not `probe`/`ask`. Run `query
+  schema` first — the `entities`/`segment_entities` tables hold each file's
+  LATEST completed extraction only, and a `metadata` collection has no
+  extraction at all (query its `files.metadata` / `files.source_metadata`
+  JSON columns). Exactly one of a positional question or `--sql` per run; an
+  uncompilable question errors instead of guessing — write the SQL yourself
+  for deep nested-JSON work. Sync results cap at `--max-rows` (default 1000);
+  `data.truncated: true` means switch to `--export csv|jsonl`. Runs bill per
+  the rate card (SQL cheaper than NL; `--dry-run` cheaper still), while
+  `schema`/`list`/`show`/`cancel` are free.
 - `workflow status` / `workflow resume` are not implemented in 0.3.x; treat
   `paused`/`partial` as terminal and surface `resume` metadata to the user.
 - `--no-upload` / `--no-download` make commands refuse cloud upload / local

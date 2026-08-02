@@ -126,6 +126,7 @@ go to stderr) — pass `--json`.
 | `search` | Keyword search over cached video context |
 | `probe` | Semantic moment/video search over a Cloudglue scope |
 | `ask` | Grounded Q&A over one or more videos |
+| `query` | Analytical SQL / natural-language queries over collection structured data (0.3.17+) |
 | `clip` | ffmpeg-backed cut, thumbs, stitch, transcode, burn, split, audio, info |
 | `grab` | Download a remote video (YouTube, TikTok, Loom, direct) |
 | `face` | Detect faces in a video, or match/search a known face, ranked by similarity |
@@ -153,6 +154,8 @@ tinycloud caption ./demo.mp4 --format srt --transcript --json
 tinycloud clip cut ./demo.mp4 --start 12 --end 28 -o clip.mp4 --json
 # Grounded Q&A over one or more videos
 tinycloud ask "What objections came up?" --in ./demo.mp4 --json
+# Analytics over a collection — SQL or plain English (0.3.17+)
+tinycloud query "how many videos per source platform?" --in collection:col_123 --json
 # Detect faces, or match a known face against a video (0.3.4+; query image: JPEG/PNG)
 tinycloud face match ./person.jpg ./demo.mp4 --max-faces 10 --json
 ```
@@ -171,7 +174,10 @@ tinycloud ask "What did customers object to?" --in collection:col_123 --json
 
 `media-descriptions` backs `ask`/`probe`/`search`, `face-analysis` backs
 `face list`/`face search`, and `entities` (created with `--prompt`/`--schema`)
-backs `library collections entities`.
+backs `library collections entities`. Any collection is also queryable with
+`query` (0.3.17+) — read-only SQL or natural language over its files,
+metadata, and extracted entities (`tinycloud query schema` shows what's
+queryable).
 
 `tinycloud commands --json` is the authoritative, machine-readable list of
 every command and flag. Full per-verb flags and cost classes:
