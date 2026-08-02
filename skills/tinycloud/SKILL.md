@@ -112,7 +112,10 @@ tinycloud jobs wait <job-id> --timeout 120s --json
 # Collections (0.3.4+) — turn videos into a reusable, queryable knowledge base.
 # Lifecycle (every --type): create → add → poll show → query → delete.
 tinycloud library collections list --json
-tinycloud library collections create my-desc --type media-descriptions --json  # types: media-descriptions | face-analysis | entities (--prompt) | rich-transcripts | metadata (0.3.15+)
+tinycloud library collections create my-desc --type media-descriptions --describe full --json  # types: media-descriptions | face-analysis | entities (--prompt) | rich-transcripts | metadata (0.3.15+)
+# --describe full|speech|light (0.3.16+): which modalities a media-descriptions collection indexes.
+# The API default is speech+summary ONLY (no visuals/scene text) and it is IMMUTABLE after create —
+# pass --describe full when visual probe/ask queries matter. `show` reports describe_config.
 tinycloud library collections add ./demo.mp4 --to col_desc --json              # uploads a local source first; enrichment is async (pending)
 tinycloud library collections show col_desc --json                            # poll files[].status until completed, then query —
 # the collection's --type decides the read verb (each line below is a DIFFERENT, matching-type collection):
