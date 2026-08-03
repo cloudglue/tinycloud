@@ -9,7 +9,7 @@ set -u
 
 # Mirror tinycloud-skill.json: min_version / supported_range upper bound
 # (CI diffs these against the manifest).
-MIN_VERSION="0.3.17"
+MIN_VERSION="0.3.18"
 MAX_VERSION_EXCLUSIVE="0.4.0"
 INSTALL_CMD='curl -fsSL https://app.cloudglue.dev/tinycloud.sh | bash'
 # Kept in sync with ../tinycloud-skill.json required_features (CI diffs them).
