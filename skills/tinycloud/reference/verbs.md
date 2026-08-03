@@ -242,7 +242,8 @@ output columns without executing (reduced cost; can't combine with
 Sync results return inline, capped by `--max-rows` (default 1000, max
 10000) — `data.truncated: true` means narrow, aggregate, or export.
 `--export csv|jsonl` streams the FULL result server-side to a gzipped
-file (2 GB compressed cap) and downloads it to `-o` (default
+file (2 GB compressed cap; `--max-rows` is rejected with it — bound an
+export with SQL `LIMIT` instead) and downloads it to `-o` (default
 `./tinycloud-output/exports/`); add `--background` to get a `pending`
 envelope immediately and poll `tinycloud query show <id>` (its `-o`
 downloads once completed; the download link lives 24h — after that,
