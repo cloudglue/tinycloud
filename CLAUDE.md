@@ -208,7 +208,32 @@ redaction that shipped the literal `[redacted]` where the cursor belonged,
 and `collections sync` mirrors no longer silently truncate at 100 files
 (pre-0.3.16, every listing was the first 50 rows with `has_more: false`).
 Because the skill teaches `--describe` and show pagination, the floor was
-raised to 0.3.16 (same merge-after-CDN gate). The host-level `profile` verb and the leading global flags `--home`/`--profile`
+raised to 0.3.16 (same merge-after-CDN gate). 0.3.17 picks up SDK 0.7.23 and
+adds the **`query` verb — analytical structured queries** over collection
+data via Cloudglue `/v1/query` (verbs 16→17, features 40→42: `query.v1` +
+`query.export.v1`): a single read-only SQL SELECT, or a natural-language
+question compiled to SQL server-side (the compiled statement returns in
+`data.sql`; an uncompilable question errors instead of guessing), runs over
+three per-request virtual tables — `files` (one row per file+collection,
+with `metadata`/`source_metadata` JSON columns), `entities`, and
+`segment_entities` (each file's MOST RECENT completed extraction only) —
+so where `probe`/`ask` find content semantically, `query` counts, groups,
+and joins it. Surface: positional question or `--sql` (exactly one),
+repeatable `--in` collection scopes (up to 20), `--dry-run`
+(validate/compile + output columns, no execution, reduced cost),
+`--max-rows` (default 1000, max 10000; `data.truncated` on cap), `--export
+csv|jsonl` (server-side background export → gzipped download to `-o` /
+`tinycloud-output/exports/`; `--background` returns `pending` with a `query
+show` next-hint), and free subcommands `schema` (virtual tables + each
+collection's extracted fields/extract_schema — the taught always-first
+step) / `list` / `show <id>` (`-o` downloads a completed export while its
+24h link lives) / `cancel <id>` (aborts an in-flight export and refunds).
+Sync SQL bills 2 credits, NL 4, dry-run 1–2, exports reserve 4 (+1/100MB);
+schema/list/show/cancel are free, and failed runs auto-refund. `query` is
+also a workflow step node and an agent tool (it joins the LLM tool set,
+unlike `login`). Because the skill teaches the verb, the floor was raised
+to 0.3.17 (same merge-after-CDN gate — the dist PR merges only after CDN
+`channels.stable` = 0.3.17). The host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
 concerns, not video operations.
