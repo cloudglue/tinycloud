@@ -17,11 +17,11 @@ The npm package is a small launcher: on first run it downloads the matching
 platform distribution from Cloudglue's CDN (cached under
 `~/.tinycloud/versions/<version>/`), verifies its checksum, and execs the real
 binary. The package version pins the binary version, so
-`npx @cloudglue/tinycloud@0.3.17` always runs tinycloud 0.3.17. It also adds two
+`npx @cloudglue/tinycloud@0.3.18` always runs tinycloud 0.3.18. It also adds two
 wrapper commands:
 
 ```bash
-tinycloud install --version 0.3.17   # pre-download a version
+tinycloud install --version 0.3.18   # pre-download a version
 tinycloud install --latest          # install latest stable and pin to it
 tinycloud update                    # move to latest stable, prune old versions
 ```
@@ -133,7 +133,7 @@ go to stderr) — pass `--json`.
 | `library` | Build & query Cloudglue collections (create/add/remove/delete) and browse connectors |
 | `jobs` | Poll, wait on, or forget async jobs |
 | `workflow` | Run packaged pipeline recipes (see below) |
-| `publish` | Publish HTML artifacts as Cloudglue Sites; share videos |
+| `publish` | Publish HTML artifacts as Cloudglue Sites (playback embeds everywhere; private sites add live chat/search/query/transcript elements); share videos |
 | `setup` | Configure the Cloudglue API key and service connections |
 | `login` | Browser sign-in — provisions & saves a Cloudglue API key (0.3.10+) |
 

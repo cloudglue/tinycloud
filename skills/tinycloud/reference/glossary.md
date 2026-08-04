@@ -169,14 +169,25 @@ connector?" or an envelope field needs explaining.
   sites also take `--preview-title` / `--preview-image`). Opting in makes those
   card fields publicly readable — content and playback stay sign-in gated — so
   ask the user first. See reference/verbs.md.
-- **Discovery components (live API, 0.3.6+)** — the same embed script also
-  defines four collection-scoped, **private-site-only** elements that let a
-  viewer search or chat inside a published site and play results inline via
-  `<cg-video>`: `<cg-chat>`, `<cg-search>`, `<cg-deep-search>` (over a
-  media-descriptions / rich-transcripts collection) and `<cg-face-search>` (over
-  a face-analysis collection). They carry no share id, but `tinycloud publish`
-  rejects them on a public site — publish `--visibility private`. See
-  reference/verbs.md.
+- **Live-API components (0.3.6+; v8–v12 surface taught from 0.3.18)** — the
+  same embed script also defines collection-scoped, **private-site-only**
+  elements that let a viewer search, chat, query, or read a transcript inside
+  a published site and play results inline via `<cg-video>`: `<cg-chat>`
+  (optional `instructions` system prompt + Stop), `<cg-search>` (tuning:
+  `scope`/`modalities`/`label-filters`/`threshold`/`limit`/`group-by`/
+  `sort-by`), `<cg-deep-search>` (streamed synthesis;
+  `exclude-weak-results`) — over a media-descriptions / rich-transcripts
+  collection — `<cg-face-search>` (over a face-analysis collection),
+  `<cg-query>` (analytical questions → inline table + compiled SQL; any
+  non-face collection, best on entities/metadata), `<cg-transcript>`
+  (click-to-seek speech turns bound to a player; unbilled), and
+  `<cg-chapters auto>` (self-populating chapters). All restylable via
+  `::part()` with host events (`cg-results`/`cg-answer`/`cg-error`,
+  cancelable `cg-resultopen`/`cg-citationopen`); their implementation loads
+  lazily from `/__cg/embed-live.js` (automatic — never a second script tag).
+  They carry no share id, but `tinycloud publish` rejects them on a public
+  site (0.3.18 extends the guard to query/transcript/chapters-auto) —
+  publish `--visibility private`. See reference/verbs.md.
 
 ## State and isolation (0.3.3+)
 

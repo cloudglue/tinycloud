@@ -654,26 +654,66 @@ private share — directly or through a container — on a public site. The full
 reference ships with the binary as `references/cg-video.md` inside the
 bundled media-artifact skill (under the install's `skills/` directory).
 
-Discovery components (live API, 0.3.6+): the same `/__cg/embed.js` script also
-defines four **collection-scoped** components that let a viewer search or chat
-*inside* a published site and play the referenced moment inline via `<cg-video>`
-— `<cg-chat>` (conversational Q&A, streaming answers + inline moment citations;
-optional `placeholder`), `<cg-search>` (keyword/transcript text search),
-`<cg-deep-search>` (agentic semantic search), and `<cg-face-search>` (upload or
-paste a face image → matching moments). Each takes `collection="<id>"` (plus
-optional `accent-color` and `--cg-height` CSS sizing); the collection's `--type`
-must match the element — `<cg-chat>`/`<cg-search>`/`<cg-deep-search>` need a
-`media-descriptions` or `rich-transcripts` collection, `<cg-face-search>` needs a
-`face-analysis` collection. Unlike the playback elements they carry **no share
-id**, but their live calls are refused on a public site, so `tinycloud publish`
-**hard-rejects** a page that embeds any of them on a public site — publish with
+Live-API components (0.3.6+; expressive surface below is sites embed v8–v12,
+taught from 0.3.18): the same `/__cg/embed.js` script also defines
+**collection-scoped** components that let a viewer search, chat, query, or
+read a transcript *inside* a published site and play the referenced moment
+inline via `<cg-video>`. Their implementation loads lazily from a second
+chunk (`/__cg/embed-live.js`) the moment a page uses one — automatic; never
+emit that file as a script tag, `/__cg/embed.js` stays the only script load.
+
+- `<cg-chat>` — conversational Q&A, streaming answers + inline moment
+  citations, built-in Stop button. Optional `instructions` (the per-site
+  system prompt — persona, tone, scope) and `placeholder`.
+- `<cg-search>` — keyword/transcript text search. Optional tuning: `scope`
+  (`segment` | `file`), `modalities`, `label-filters` (space/comma lists),
+  `threshold`, `limit`, `group-by="file"`, `sort-by` (`score` |
+  `item_count`). Malformed values degrade to defaults, never an error.
+- `<cg-deep-search>` — agentic semantic search; the synthesis streams in and
+  result cards land as found. Optional `scope`, `limit`,
+  `exclude-weak-results`.
+- `<cg-face-search>` — upload or paste a face image → matching moments,
+  played as short bounded clips. Optional `threshold`, `limit`.
+- `<cg-query>` (embed v11) — natural-language analytical question → inline
+  table + row count, with the compiled SQL shown under the answer (the
+  site-side face of the `query` verb's engine). Optional `max-rows`. Point
+  it at an entities or metadata collection — often a **different id** than
+  the one chat/search use on the same page.
+- `<cg-transcript share-id collection [for]>` (embed v12) — click-to-seek
+  speech turns with timestamps + speakers; with `for="<player-id>"` the
+  active turn follows the playhead, without it turns open as modal clips.
+  Unbilled. Height via `--cg-height`.
+- `<cg-chapters auto share-id collection>` (embed v12) — chapters
+  self-populate from the live API instead of baked-in `<cg-chapter>`
+  children; auto chapters always seek-and-continue. The `auto` attribute
+  makes the otherwise public-safe chapters element private-site-only.
+
+Every live panel is restylable from page CSS via `::part()` hooks
+(`panel`/`input`/`send`/`status`/`results`, per-card `result*`; chat adds
+`log`/`message`(+role)/`bubble`/`citation`/`stop`) and emits host events:
+`cg-results`, `cg-answer`, `cg-error` (carries the HTTP status), plus the
+**cancelable** `cg-resultopen`/`cg-citationopen` — `preventDefault()` swaps
+the built-in clip mount for your own handling (embed v10). A
+`window.cloudglue` JS client (responses/search/deepSearch/faceSearch/query/
+transcript/sharesForFiles/renderCitations) backs fully custom UIs.
+
+Each collection-scoped element takes `collection="<id>"` (plus optional
+`accent-color` and `--cg-height` CSS sizing); the collection's `--type` must
+match the element — `<cg-chat>`/`<cg-search>`/`<cg-deep-search>`/
+`<cg-transcript>`/`<cg-chapters auto>` need a `media-descriptions` or
+`rich-transcripts` collection, `<cg-face-search>` needs a `face-analysis`
+collection, `<cg-query>` runs over any non-face collection. Their live calls
+are refused on a public site, so `tinycloud publish` **hard-rejects** a page
+that embeds any of them on a public site (0.3.18 extends the guard to
+`<cg-query>`/`<cg-transcript>`/`<cg-chapters auto>`) — publish with
 `--visibility private`. End to end: build a collection of the right type
 (`library collections create … --type …` → `library collections add` → poll
-`library collections show` until each file is `completed`) → author HTML with
-the component → `tinycloud publish <html> --visibility private`. Full reference
-plus a kitchen-sink page wiring every component (props, JS API, events) ships
-with the binary as `references/cg-video.md` and `references/kitchen-sink.html`
-inside the bundled media-artifact skill.
+`library collections show` until each file is `completed`; for `<cg-query>`,
+`query schema --in collection:<id>` shows what's queryable) → author HTML
+with the component → `tinycloud publish <html> --visibility private`. Full
+reference plus a kitchen-sink page wiring every component (props, JS API,
+events) ships with the binary as `references/cg-video.md` and
+`references/kitchen-sink.html` inside the bundled media-artifact skill.
 
 ### setup — credentials
 

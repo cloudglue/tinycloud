@@ -265,12 +265,21 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   link (content and playback stay sign-in gated), and platforms cache per exact
   URL, so turning it back off does not retract posted cards. Details in
   [reference/verbs.md](reference/verbs.md).
-- Live-API discovery components (0.3.6+): the same embed script also defines
-  collection-scoped, **private-site-only** elements that let viewers search/chat
-  inside a published site — `<cg-chat>`, `<cg-search>`, `<cg-deep-search>`,
-  `<cg-face-search>` (chat/search/deep-search need a media-descriptions or
-  rich-transcripts collection; face-search needs face-analysis). `publish`
-  **hard-rejects** them on a public site → publish with `--visibility private`.
+- Live-API components (0.3.6+; the fuller v8–v12 surface is taught from
+  0.3.18): the same embed script also defines collection-scoped,
+  **private-site-only** elements that let viewers search/chat/query inside a
+  published site — `<cg-chat>` (optional `instructions` system prompt +
+  Stop), `<cg-search>`/`<cg-deep-search>` (tuning attributes; deep search
+  streams its synthesis), `<cg-face-search>`, `<cg-query>` (analytical
+  questions → inline table + compiled SQL; point at an entities/metadata
+  collection), `<cg-transcript>` (click-to-seek speech turns bound to a
+  player), and `<cg-chapters auto>` (self-populating chapters).
+  Chat/search/deep-search/transcript/chapters-auto need a media-descriptions
+  or rich-transcripts collection; face-search needs face-analysis; query runs
+  over any non-face collection. All are restylable via `::part()` and emit
+  `cg-results`/`cg-answer`/`cg-error` plus cancelable
+  `cg-resultopen`/`cg-citationopen` events. `publish` **hard-rejects** all of
+  them on a public site → publish with `--visibility private`.
   See [reference/verbs.md](reference/verbs.md).
 
 ## 5. Reference (load on demand)
