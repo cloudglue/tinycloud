@@ -208,7 +208,60 @@ redaction that shipped the literal `[redacted]` where the cursor belonged,
 and `collections sync` mirrors no longer silently truncate at 100 files
 (pre-0.3.16, every listing was the first 50 rows with `has_more: false`).
 Because the skill teaches `--describe` and show pagination, the floor was
-raised to 0.3.16 (same merge-after-CDN gate). The host-level `profile` verb and the leading global flags `--home`/`--profile`
+raised to 0.3.16 (same merge-after-CDN gate). 0.3.17 picks up SDK 0.7.23 and
+adds the **`query` verb — analytical structured queries** over collection
+data via Cloudglue `/v1/query` (verbs 16→17, features 40→42: `query.v1` +
+`query.export.v1`): a single read-only SQL SELECT, or a natural-language
+question compiled to SQL server-side (the compiled statement returns in
+`data.sql`; an uncompilable question errors instead of guessing), runs over
+three per-request virtual tables — `files` (one row per file+collection,
+with `metadata`/`source_metadata` JSON columns), `entities`, and
+`segment_entities` (each file's MOST RECENT completed extraction only) —
+so where `probe`/`ask` find content semantically, `query` counts, groups,
+and joins it. Surface: positional question or `--sql` (exactly one),
+repeatable `--in` collection scopes (up to 20), `--dry-run`
+(validate/compile + output columns, no execution, reduced cost),
+`--max-rows` (default 1000, max 10000; `data.truncated` on cap), `--export
+csv|jsonl` (server-side background export → gzipped download to `-o` /
+`tinycloud-output/exports/`; `--background` returns `pending` with a `query
+show` next-hint), and free subcommands `schema` (virtual tables + each
+collection's extracted fields/extract_schema — the taught always-first
+step) / `list` / `show <id>` (`-o` downloads a completed export while its
+24h link lives) / `cancel <id>` (aborts an in-flight export and refunds).
+Sync SQL bills 2 credits, NL 4, dry-run 1–2, exports reserve 4 (+1/100MB);
+schema/list/show/cancel are free, and failed runs auto-refund. `query` is
+also a workflow step node and an agent tool (it joins the LLM tool set,
+unlike `login`). Because the skill teaches the verb, the floor was raised
+to 0.3.17 (same merge-after-CDN gate — the dist PR merges only after CDN
+`channels.stable` = 0.3.17). 0.3.18 is a **sites-embed v8–v12 parity and
+publish-guard release** (no new verbs, flags, or feature ids — verbs stay 17,
+features stay 42; the embed features ship in the Cloudglue-served script, so
+already-published sites pick them up without republishing): the embed family
+the binary teaches moved from v7 to v12 — v8 splits delivery into a core
+script plus a lazily-loaded live chunk (`/__cg/embed-live.js`; no
+author-facing change, `/__cg/embed.js` stays the only script tag and
+generators must never add the chunk themselves), v9 opens up the live
+elements (`<cg-chat>` gains `instructions` — a per-site system prompt — and a
+Stop button; `<cg-search>` gains `scope`/`modalities`/`label-filters`/
+`threshold`/`limit`/`group-by="file"`/`sort-by`; `<cg-deep-search>` streams
+its synthesis and takes `exclude-weak-results`; `<cg-face-search>` takes
+`threshold`/`limit` and plays hits as short bounded moments; the JS client's
+`search`/`faceSearch` accept the full v1 `filter` object), v10 makes every
+live panel restylable via `::part()` and emits host events (`cg-results` /
+`cg-answer` / `cg-error`, plus cancelable `cg-resultopen`/`cg-citationopen`
+to override how moments open), v11 adds `<cg-query>` +
+`window.cloudglue.query` (natural-language analytical questions → inline
+table + the compiled SQL — the site-side face of the same engine as the
+`query` verb; point it at an entities/metadata collection), and v12 adds
+`<cg-transcript>` + `window.cloudglue.transcript` (click-to-seek speech
+turns that follow a bound player; unbilled) and `<cg-chapters auto>`
+self-population. The binary-side change: the publish public-site guard now
+also rejects `<cg-query>`, `<cg-transcript>`, and `<cg-chapters auto>` (the
+`auto` attribute makes the otherwise public-safe chapters element
+private-only; explicit-children `<cg-chapters>` stays public-safe). Because
+the skill teaches the new elements and relies on that extended guard, the
+floor was raised to 0.3.18 (same merge-after-CDN gate — the dist PR merges
+only after CDN `channels.stable` = 0.3.18). The host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
 concerns, not video operations.
@@ -260,9 +313,9 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.16 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0 through 0.3.16, with `manifest.json` + `.sha256`
-  sidecars; `channels.stable` = 0.3.16); all smoke legs are required.
+- The live CDN serves 0.3.18 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0 through 0.3.18, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.18); all smoke legs are required.
 - `publish-npm.yml` (tag `v*`): asserts tag == package.json version → gates
   on `generate-manifest.mjs --check` against the live CDN → publishes via
   npm trusted publishing (OIDC, `id-token: write`, npm ≥ 11.5.1 — no token

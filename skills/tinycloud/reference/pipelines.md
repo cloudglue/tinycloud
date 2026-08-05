@@ -76,8 +76,9 @@ tinycloud search "pricing" --in ./demo.mp4 --json
 - `--refresh` → force recompute (spends even on cache hits).
 - `--no-cache` → don't persist results (still spends).
 - These four flags exist on `watch`, `extract`, `caption`, and `workflow`
-  only — `ask`/`probe` always go to the cloud (use `search` for a free
-  cached lookup).
+  only — `ask`/`probe`/`query` always go to the cloud (use `search` for a
+  free cached lookup; `query show <id>` re-fetches a stored query run for
+  free).
 - `meta.cache` in every envelope tells you what was reused vs written.
 
 ## Worked examples
@@ -121,6 +122,12 @@ tinycloud library collections create ents --type entities --prompt "people, plac
 tinycloud library collections add ./interview.mp4 --to col_123 --json     # → pending
 tinycloud library collections show col_123 --json                          # poll files[].status → completed
 tinycloud library collections entities col_123 ./interview.mp4 --json      # structured entities (video + segment level)
+
+# Analytics across any collection (0.3.17+) — count/group/join what was extracted
+tinycloud query schema --in collection:col_123 --json                      # what's queryable (always first)
+tinycloud query "which people appear in the most videos?" --in collection:col_123 --json
+tinycloud query --sql "SELECT value_text AS person, COUNT(DISTINCT file_id) AS files \
+  FROM entities WHERE field='people' GROUP BY 1 ORDER BY 2 DESC" --in collection:col_123 --json
 
 # Already-built collection: mirror description/transcript artifacts locally for free `search`
 tinycloud library collections sync col_123 --artifacts descriptions,transcripts --json

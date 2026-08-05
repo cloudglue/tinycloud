@@ -17,11 +17,11 @@ The npm package is a small launcher: on first run it downloads the matching
 platform distribution from Cloudglue's CDN (cached under
 `~/.tinycloud/versions/<version>/`), verifies its checksum, and execs the real
 binary. The package version pins the binary version, so
-`npx @cloudglue/tinycloud@0.3.16` always runs tinycloud 0.3.16. It also adds two
+`npx @cloudglue/tinycloud@0.3.18` always runs tinycloud 0.3.18. It also adds two
 wrapper commands:
 
 ```bash
-tinycloud install --version 0.3.16   # pre-download a version
+tinycloud install --version 0.3.18   # pre-download a version
 tinycloud install --latest          # install latest stable and pin to it
 tinycloud update                    # move to latest stable, prune old versions
 ```
@@ -126,13 +126,14 @@ go to stderr) — pass `--json`.
 | `search` | Keyword search over cached video context |
 | `probe` | Semantic moment/video search over a Cloudglue scope |
 | `ask` | Grounded Q&A over one or more videos |
+| `query` | Analytical SQL / natural-language queries over collection structured data (0.3.17+) |
 | `clip` | ffmpeg-backed cut, thumbs, stitch, transcode, burn, split, audio, info |
 | `grab` | Download a remote video (YouTube, TikTok, Loom, direct) |
 | `face` | Detect faces in a video, or match/search a known face, ranked by similarity |
 | `library` | Build & query Cloudglue collections (create/add/remove/delete) and browse connectors |
 | `jobs` | Poll, wait on, or forget async jobs |
 | `workflow` | Run packaged pipeline recipes (see below) |
-| `publish` | Publish HTML artifacts as Cloudglue Sites; share videos |
+| `publish` | Publish HTML artifacts as Cloudglue Sites (playback embeds everywhere; private sites add live chat/search/query/transcript elements); share videos |
 | `setup` | Configure the Cloudglue API key and service connections |
 | `login` | Browser sign-in — provisions & saves a Cloudglue API key (0.3.10+) |
 
@@ -153,6 +154,8 @@ tinycloud caption ./demo.mp4 --format srt --transcript --json
 tinycloud clip cut ./demo.mp4 --start 12 --end 28 -o clip.mp4 --json
 # Grounded Q&A over one or more videos
 tinycloud ask "What objections came up?" --in ./demo.mp4 --json
+# Analytics over a collection — SQL or plain English (0.3.17+)
+tinycloud query "how many videos per source platform?" --in collection:col_123 --json
 # Detect faces, or match a known face against a video (0.3.4+; query image: JPEG/PNG)
 tinycloud face match ./person.jpg ./demo.mp4 --max-faces 10 --json
 ```
@@ -171,7 +174,10 @@ tinycloud ask "What did customers object to?" --in collection:col_123 --json
 
 `media-descriptions` backs `ask`/`probe`/`search`, `face-analysis` backs
 `face list`/`face search`, and `entities` (created with `--prompt`/`--schema`)
-backs `library collections entities`.
+backs `library collections entities`. Any collection is also queryable with
+`query` (0.3.17+) — read-only SQL or natural language over its files,
+metadata, and extracted entities (`tinycloud query schema` shows what's
+queryable).
 
 `tinycloud commands --json` is the authoritative, machine-readable list of
 every command and flag. Full per-verb flags and cost classes:

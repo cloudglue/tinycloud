@@ -45,6 +45,18 @@ connector?" or an envelope field needs explaining.
   or processing the media — free to index, no processing configs. Query with
   `probe --scope file` (optionally `--filter` on `source_metadata.*` /
   `metadata.*` paths) or `ask`; feature id `library.collections.metadata.v1`.
+- **Structured query (0.3.17+)** — an analytical read-only SQL `SELECT` (or a
+  natural-language question compiled to SQL server-side) run by `tinycloud
+  query` over a collection's structured data; features `query.v1` /
+  `query.export.v1`. Complements semantic search: `probe`/`ask` FIND
+  content, `query` MEASURES it (counts, group-bys, joins). Runs are stored
+  (`query list`/`show`) and large results export to gzipped CSV/JSONL.
+- **Virtual tables** — the three per-request tables a structured query sees:
+  `files` (one row per file+collection: attributes plus `metadata` and
+  `source_metadata` JSON columns), `entities` (file-level extracted fields),
+  and `segment_entities` (segment-level entities with timestamps). Built from
+  each file's most recent completed extraction; discover the exact columns
+  and extracted fields with `tinycloud query schema --in collection:col_…`.
 - **Source metadata** — the provider-supplied fields a connector attaches to
   a synced file (`source_metadata`: title, participants, dates, tags, AI
   summary; Iconik adds `iconik_metadata.<Field>` custom fields). Peek it
@@ -157,14 +169,25 @@ connector?" or an envelope field needs explaining.
   sites also take `--preview-title` / `--preview-image`). Opting in makes those
   card fields publicly readable — content and playback stay sign-in gated — so
   ask the user first. See reference/verbs.md.
-- **Discovery components (live API, 0.3.6+)** — the same embed script also
-  defines four collection-scoped, **private-site-only** elements that let a
-  viewer search or chat inside a published site and play results inline via
-  `<cg-video>`: `<cg-chat>`, `<cg-search>`, `<cg-deep-search>` (over a
-  media-descriptions / rich-transcripts collection) and `<cg-face-search>` (over
-  a face-analysis collection). They carry no share id, but `tinycloud publish`
-  rejects them on a public site — publish `--visibility private`. See
-  reference/verbs.md.
+- **Live-API components (0.3.6+; v8–v12 surface taught from 0.3.18)** — the
+  same embed script also defines collection-scoped, **private-site-only**
+  elements that let a viewer search, chat, query, or read a transcript inside
+  a published site and play results inline via `<cg-video>`: `<cg-chat>`
+  (optional `instructions` system prompt + Stop), `<cg-search>` (tuning:
+  `scope`/`modalities`/`label-filters`/`threshold`/`limit`/`group-by`/
+  `sort-by`), `<cg-deep-search>` (streamed synthesis;
+  `exclude-weak-results`) — over a media-descriptions / rich-transcripts
+  collection — `<cg-face-search>` (over a face-analysis collection),
+  `<cg-query>` (analytical questions → inline table + compiled SQL; any
+  non-face collection, best on entities/metadata), `<cg-transcript>`
+  (click-to-seek speech turns bound to a player; unbilled), and
+  `<cg-chapters auto>` (self-populating chapters). All restylable via
+  `::part()` with host events (`cg-results`/`cg-answer`/`cg-error`,
+  cancelable `cg-resultopen`/`cg-citationopen`); their implementation loads
+  lazily from `/__cg/embed-live.js` (automatic — never a second script tag).
+  They carry no share id, but `tinycloud publish` rejects them on a public
+  site (0.3.18 extends the guard to query/transcript/chapters-auto) —
+  publish `--visibility private`. See reference/verbs.md.
 
 ## State and isolation (0.3.3+)
 

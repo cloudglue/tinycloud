@@ -13,6 +13,7 @@ every verb. Regenerate doubts from it instead of trusting prose.
 | `search` | local | no | Local keyword search over cached context |
 | `probe` | cloud | yes | Semantic moment/video search over a Cloudglue-ready scope |
 | `ask` | cloud | yes | Grounded Q&A over one or more videos |
+| `query` | cloud | yes | Analytical SQL / natural-language queries over collection structured data (0.3.17+) |
 | `clip` | local | no | Cuts, thumbs, audio, stitch, split, transcode, burn, explore |
 | `grab` | network | no | Download a remote video (YouTube, TikTok, Loom, direct) |
 | `face` | cloud | yes | Detect faces in a video, or match/search a query face (0.3.4+) |
@@ -187,6 +188,76 @@ tinycloud ask "<question>" --in <source|collection:col_…|all>
 
 Never pass `--background` to `ask`.
 
+### query — structured analytics over collections (cloud, 0.3.17+)
+
+```bash
+tinycloud query "<question>" --in collection:col_… [--in collection:col_…]   # NL → SQL
+tinycloud query --sql "SELECT …" --in collection:col_… [--max-rows <n>] [--dry-run]
+tinycloud query "<question-or---sql>" --in collection:col_… --export csv|jsonl [-o <path>] [--background]
+tinycloud query schema --in collection:col_…        # ALWAYS first: what's queryable
+tinycloud query list [--status completed|failed|in_progress|cancelled] [--limit <n>] [--offset <n>]
+tinycloud query show <query-id> [-o <path>]         # re-fetch a stored run; -o downloads an export
+tinycloud query cancel <query-id>                   # abort an in-flight export (refunds)
+```
+
+Where `probe`/`ask` FIND content semantically, `query` MEASURES it (features
+`query.v1`/`query.export.v1`): a single read-only SQL `SELECT` — or a plain-
+English question compiled to SQL server-side — over three virtual tables
+built per request from the `--in` collections (repeatable, up to 20; joins
+across collections work):
+
+- `files` — one row per (file, collection): `filename`, `title`, `uri`,
+  `source`, `created_at`, `bytes`, `duration_seconds`, `width`/`height`,
+  `has_audio`, plus `metadata` (user metadata) and `source_metadata`
+  (connector fields) as JSON columns.
+- `entities` — file-level extracted fields as (`field`, `value`,
+  `value_text`) rows.
+- `segment_entities` — segment-level entities JSON with
+  `segment_index`/`start_time`/`end_time`.
+
+The entity tables reflect each file's **most recent completed extraction
+only** (re-extraction replaces rows — no double counting), and files without
+extractions still appear in `files` — so `LEFT JOIN`, always on **both**
+`file_id` and `collection_id` (`USING (file_id, collection_id)`). A
+`metadata` collection has no extraction (`extract_schema: null`) — query its
+`files.metadata`/`files.source_metadata` columns with
+`json_extract`/`json_extract_string`.
+
+**Run `query schema --in collection:col_… --json` before writing SQL** — it
+returns the table columns plus each collection's extracted field names,
+levels (file vs segment), and verbatim `extract_schema`/`prompt`, i.e. the
+JSON paths you need. Standard SQL works (JSON functions, CTEs, window
+functions, `date_trunc`); DDL/DML, multiple statements, and
+`ATTACH`/`COPY`/`SET`/`PRAGMA` are rejected.
+
+Exactly one of the positional question or `--sql` per run. NL runs return
+the compiled statement in `data.sql` — inspect, tweak, resubmit as `--sql`
+(which also bills less). NL suits straightforward analytics (counts,
+rankings, group-bys); a question that can't compile fails with a clear
+error instead of guessing — write the SQL directly for deep nested-JSON
+work. `--dry-run` validates/compiles and returns the effective SQL +
+output columns without executing (reduced cost; can't combine with
+`--export`).
+
+Sync results return inline, capped by `--max-rows` (default 1000, max
+10000) — `data.truncated: true` means narrow, aggregate, or export.
+`--export csv|jsonl` streams the FULL result server-side to a gzipped
+file (2 GB compressed cap; `--max-rows` is rejected with it — bound an
+export with SQL `LIMIT` instead) and downloads it to `-o` (default
+`./tinycloud-output/exports/`); add `--background` to get a `pending`
+envelope immediately and poll `tinycloud query show <id>` (its `-o`
+downloads once completed; the download link lives 24h — after that,
+re-run the export). Runs are stored server-side: `list`/`show` browse
+them (list rows omit columns/rows), `cancel` aborts an in-flight export
+and refunds its reserved credits.
+
+Billing (per the rate card): sync SQL and NL runs bill per query (NL >
+SQL), `--dry-run` bills less, exports reserve credits + a size-based
+component; `schema`/`list`/`show`/`cancel` are free. Failed runs are
+refunded automatically. Server limits: 20 collections and ~2000 files in
+scope per query, 15s execution, 1 concurrent query per account (excess →
+429; just retry).
+
 ### clip — local derivatives (free, ffmpeg-backed)
 
 Subcommands: `cut thumbs stitch transcode burn extract-audio split info explore`
@@ -311,6 +382,10 @@ same `create → add → poll show → query → delete` lifecycle):
 | `entities` (needs `--prompt`/`--schema`) | `library collections entities <col> <source>` |
 | `rich-transcripts` | `collections sync --artifacts transcripts` |
 | `metadata` (0.3.15+, free) | `probe --scope file` / `ask` |
+
+Every type is additionally queryable with `query` (0.3.17+) for analytics —
+counts, group-bys, joins over file attributes, user/connector metadata, and
+(for `entities` collections) the extracted fields; see the `query` section.
 
 `collections entities <col> <source>` returns a video's extracted entities
 (video- and segment-level, `--limit`/`--offset`) from an `entities` collection.
@@ -579,26 +654,66 @@ private share — directly or through a container — on a public site. The full
 reference ships with the binary as `references/cg-video.md` inside the
 bundled media-artifact skill (under the install's `skills/` directory).
 
-Discovery components (live API, 0.3.6+): the same `/__cg/embed.js` script also
-defines four **collection-scoped** components that let a viewer search or chat
-*inside* a published site and play the referenced moment inline via `<cg-video>`
-— `<cg-chat>` (conversational Q&A, streaming answers + inline moment citations;
-optional `placeholder`), `<cg-search>` (keyword/transcript text search),
-`<cg-deep-search>` (agentic semantic search), and `<cg-face-search>` (upload or
-paste a face image → matching moments). Each takes `collection="<id>"` (plus
-optional `accent-color` and `--cg-height` CSS sizing); the collection's `--type`
-must match the element — `<cg-chat>`/`<cg-search>`/`<cg-deep-search>` need a
-`media-descriptions` or `rich-transcripts` collection, `<cg-face-search>` needs a
-`face-analysis` collection. Unlike the playback elements they carry **no share
-id**, but their live calls are refused on a public site, so `tinycloud publish`
-**hard-rejects** a page that embeds any of them on a public site — publish with
+Live-API components (0.3.6+; expressive surface below is sites embed v8–v12,
+taught from 0.3.18): the same `/__cg/embed.js` script also defines
+**collection-scoped** components that let a viewer search, chat, query, or
+read a transcript *inside* a published site and play the referenced moment
+inline via `<cg-video>`. Their implementation loads lazily from a second
+chunk (`/__cg/embed-live.js`) the moment a page uses one — automatic; never
+emit that file as a script tag, `/__cg/embed.js` stays the only script load.
+
+- `<cg-chat>` — conversational Q&A, streaming answers + inline moment
+  citations, built-in Stop button. Optional `instructions` (the per-site
+  system prompt — persona, tone, scope) and `placeholder`.
+- `<cg-search>` — keyword/transcript text search. Optional tuning: `scope`
+  (`segment` | `file`), `modalities`, `label-filters` (space/comma lists),
+  `threshold`, `limit`, `group-by="file"`, `sort-by` (`score` |
+  `item_count`). Malformed values degrade to defaults, never an error.
+- `<cg-deep-search>` — agentic semantic search; the synthesis streams in and
+  result cards land as found. Optional `scope`, `limit`,
+  `exclude-weak-results`.
+- `<cg-face-search>` — upload or paste a face image → matching moments,
+  played as short bounded clips. Optional `threshold`, `limit`.
+- `<cg-query>` (embed v11) — natural-language analytical question → inline
+  table + row count, with the compiled SQL shown under the answer (the
+  site-side face of the `query` verb's engine). Optional `max-rows`. Point
+  it at an entities or metadata collection — often a **different id** than
+  the one chat/search use on the same page.
+- `<cg-transcript share-id collection [for]>` (embed v12) — click-to-seek
+  speech turns with timestamps + speakers; with `for="<player-id>"` the
+  active turn follows the playhead, without it turns open as modal clips.
+  Unbilled. Height via `--cg-height`.
+- `<cg-chapters auto share-id collection>` (embed v12) — chapters
+  self-populate from the live API instead of baked-in `<cg-chapter>`
+  children; auto chapters always seek-and-continue. The `auto` attribute
+  makes the otherwise public-safe chapters element private-site-only.
+
+Every live panel is restylable from page CSS via `::part()` hooks
+(`panel`/`input`/`send`/`status`/`results`, per-card `result*`; chat adds
+`log`/`message`(+role)/`bubble`/`citation`/`stop`) and emits host events:
+`cg-results`, `cg-answer`, `cg-error` (carries the HTTP status), plus the
+**cancelable** `cg-resultopen`/`cg-citationopen` — `preventDefault()` swaps
+the built-in clip mount for your own handling (embed v10). A
+`window.cloudglue` JS client (responses/search/deepSearch/faceSearch/query/
+transcript/sharesForFiles/renderCitations) backs fully custom UIs.
+
+Each collection-scoped element takes `collection="<id>"` (plus optional
+`accent-color` and `--cg-height` CSS sizing); the collection's `--type` must
+match the element — `<cg-chat>`/`<cg-search>`/`<cg-deep-search>`/
+`<cg-transcript>`/`<cg-chapters auto>` need a `media-descriptions` or
+`rich-transcripts` collection, `<cg-face-search>` needs a `face-analysis`
+collection, `<cg-query>` runs over any non-face collection. Their live calls
+are refused on a public site, so `tinycloud publish` **hard-rejects** a page
+that embeds any of them on a public site (0.3.18 extends the guard to
+`<cg-query>`/`<cg-transcript>`/`<cg-chapters auto>`) — publish with
 `--visibility private`. End to end: build a collection of the right type
 (`library collections create … --type …` → `library collections add` → poll
-`library collections show` until each file is `completed`) → author HTML with
-the component → `tinycloud publish <html> --visibility private`. Full reference
-plus a kitchen-sink page wiring every component (props, JS API, events) ships
-with the binary as `references/cg-video.md` and `references/kitchen-sink.html`
-inside the bundled media-artifact skill.
+`library collections show` until each file is `completed`; for `<cg-query>`,
+`query schema --in collection:<id>` shows what's queryable) → author HTML
+with the component → `tinycloud publish <html> --visibility private`. Full
+reference plus a kitchen-sink page wiring every component (props, JS API,
+events) ships with the binary as `references/cg-video.md` and
+`references/kitchen-sink.html` inside the bundled media-artifact skill.
 
 ### setup — credentials
 
@@ -638,8 +753,9 @@ Output: `--json` (force JSONL envelopes), `--pretty` (one JSON array),
 
 Cache — on `watch`, `see`, `extract`, `caption`, `face`, and `workflow` only:
 `--refresh` (recompute), `--no-cache` (no persistence), `--cached` (reuse
-exact-match history). `ask`/`probe` always call the cloud; use `search` for a
-free cached lookup.
+exact-match history). `ask`/`probe`/`query` always call the cloud; use
+`search` for a free cached lookup (and `query show` to re-fetch a stored
+query run for free).
 
 Upload/download refusal — on every verb that resolves a source:
 `--no-upload` (refuse cloud upload → `needs_upload`) on `watch`/`see`/`extract`/
