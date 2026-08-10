@@ -114,7 +114,9 @@ binary reports in `--version --json`.
 | `TINYCLOUD_UPLOAD_IDLE_TIMEOUT_MS` | Idle (no-progress) deadline for an upload — aborts a wedged transfer in ~1min instead of waiting out the total upload deadline (default 60s; `0` disables) |
 | `TINYCLOUD_HTTP_RETRIES` | Bounded auto-retries for idempotent (GET/HEAD) Cloudglue calls on transient errors — 408/429/5xx, network blips (default 5; `0` disables) |
 | `TINYCLOUD_JOB_WAIT_TIMEOUT_MS` | Wall-clock budget for async job waits (the `waitForReady` poll behind `watch`/`extract`/`face`) (default 10min; `0` disables) |
-| `TINYCLOUD_MODEL_RETRIES` | Client-side retries for the interactive agent's chat-model turns on transient connection errors (default 5; `0` disables). 0.3.7+ |
+| `TINYCLOUD_MODEL_RETRIES` | Client-side retries for agent chat-model turns on transient connection errors (default 5; `0` disables). 0.3.7+ interactive; 0.3.19+ also headless `-p` |
+| `TINYCLOUD_MODEL_MAX_TOKENS` | Per-response output-token cap for agent chat-model turns (interactive and headless `-p`) — thinking, text, and tool calls share it (default 32000). 0.3.19+ |
+| `TINYCLOUD_AUTO_CONTINUE` | `0` stops the interactive agent auto-resuming after an output-token-truncated turn (default on, bounded to 2 consecutive; also `preferences.autoContinue: false` in config). 0.3.19+ |
 
 Every Cloudglue request carries a hard deadline, so a stalled route can never
 hang the CLI indefinitely; a timeout surfaces as a retryable `upstream` error

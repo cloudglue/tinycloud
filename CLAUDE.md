@@ -261,7 +261,33 @@ also rejects `<cg-query>`, `<cg-transcript>`, and `<cg-chapters auto>` (the
 private-only; explicit-children `<cg-chapters>` stays public-safe). Because
 the skill teaches the new elements and relies on that extended guard, the
 floor was raised to 0.3.18 (same merge-after-CDN gate — the dist PR merges
-only after CDN `channels.stable` = 0.3.18). The host-level `profile` verb and the leading global flags `--home`/`--profile`
+only after CDN `channels.stable` = 0.3.18). 0.3.19 is a **host-agent
+reliability release — the silent-stop fix** (no new verbs, flags, or feature
+ids — verbs stay 17, features stay 42; the changes live in the interactive
+agent and headless `-p`, not the video-verb surface the skill drives, so the
+skill floor stays 0.3.18 — the 0.3.13 no-raise pattern): adaptive-thinking
+chat models stream a thinking block that spends from the same per-response
+`max_tokens` budget as text and tool calls, so a long think could exhaust the
+old 8192-token cap, return `stop_reason: max_tokens` with no error, and the
+agent silently yielded mid-task with only a duration line (typing `continue`
+resumed it). Now a `length`-stopped turn — and an empty `stop`-ended one,
+e.g. a dropped stream read as a clean end — surfaces a status line instead of
+a quiet handoff; the cap rises to 32000, tunable via
+`TINYCLOUD_MODEL_MAX_TOKENS`; a guard blocks the final tool call of a
+`length`-stopped message with an error result (truncated tool-call JSON gets
+repaired into valid-but-incomplete args, e.g. a write with half a file) so
+the model re-issues it in smaller pieces, wired in both the interactive
+agent and headless `-p`; a truncated turn auto-continues via a hidden
+prompt, bounded to 2 consecutive per user turn, disabled with
+`TINYCLOUD_AUTO_CONTINUE=0` or `preferences.autoContinue: false`; streamed
+thinking shows a "Reasoning" loader label; and headless `-p --json` traces
+gain an additive `stop_reason` field plus a stderr warning on truncation.
+Headless `-p` also reaches parity with the interactive agent on model
+failures: it gains the 0.3.7 chat-retry layer (`TINYCLOUD_MODEL_RETRIES` now
+covers both agents), and an errored turn is truthful — `✖ turn failed` on
+stderr, an `error` field in the `--json` trace, exit 1 (previously a
+backend blip could exit 0 with an empty, zero-usage trace).
+The host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
 concerns, not video operations.
@@ -313,9 +339,9 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.18 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0 through 0.3.18, with `manifest.json` + `.sha256`
-  sidecars; `channels.stable` = 0.3.18); all smoke legs are required.
+- The live CDN serves 0.3.19 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0 through 0.3.19, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.19); all smoke legs are required.
 - `publish-npm.yml` (tag `v*`): asserts tag == package.json version → gates
   on `generate-manifest.mjs --check` against the live CDN → publishes via
   npm trusted publishing (OIDC, `id-token: write`, npm ≥ 11.5.1 — no token
