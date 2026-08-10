@@ -261,7 +261,28 @@ also rejects `<cg-query>`, `<cg-transcript>`, and `<cg-chapters auto>` (the
 private-only; explicit-children `<cg-chapters>` stays public-safe). Because
 the skill teaches the new elements and relies on that extended guard, the
 floor was raised to 0.3.18 (same merge-after-CDN gate — the dist PR merges
-only after CDN `channels.stable` = 0.3.18). The host-level `profile` verb and the leading global flags `--home`/`--profile`
+only after CDN `channels.stable` = 0.3.18). 0.3.19 is a **host-agent
+reliability release — the silent-stop fix** (no new verbs, flags, or feature
+ids — verbs stay 17, features stay 42; the changes live in the interactive
+agent and headless `-p`, not the video-verb surface the skill drives, so the
+skill floor stays 0.3.18 — the 0.3.13 no-raise pattern): adaptive-thinking
+chat models stream a thinking block that spends from the same per-response
+`max_tokens` budget as text and tool calls, so a long think could exhaust the
+old 8192-token cap, return `stop_reason: max_tokens` with no error, and the
+agent silently yielded mid-task with only a duration line (typing `continue`
+resumed it). Now a `length`-stopped turn — and an empty `stop`-ended one,
+e.g. a dropped stream read as a clean end — surfaces a status line instead of
+a quiet handoff; the cap rises to 32000, tunable via
+`TINYCLOUD_MODEL_MAX_TOKENS`; a guard blocks the final tool call of a
+`length`-stopped message with an error result (truncated tool-call JSON gets
+repaired into valid-but-incomplete args, e.g. a write with half a file) so
+the model re-issues it in smaller pieces, wired in both the interactive
+agent and headless `-p`; a truncated turn auto-continues via a hidden
+prompt, bounded to 2 consecutive per user turn, disabled with
+`TINYCLOUD_AUTO_CONTINUE=0` or `preferences.autoContinue: false`; streamed
+thinking shows a "Reasoning" loader label; and headless `-p --json` traces
+gain an additive `stop_reason` field plus a stderr warning on truncation.
+The host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
 concerns, not video operations.
