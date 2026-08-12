@@ -88,7 +88,8 @@ tinycloud caption ./demo.mp4 --format srt --transcript -o ./tinycloud-output/cap
 
 # Find things: local keyword search vs cloud semantic search vs Q&A
 tinycloud search "pricing" --in ./demo.mp4 --json
-tinycloud probe "product demo moments" --in collection:col_123 --scope segment --limit 5 --json
+tinycloud probe "product demo moments" --in collection:col_123 --limit 5 --json   # no --scope = AUTO (0.3.20+): the search picks the right level
+tinycloud probe "product demo moments" --in collection:col_123 --scope segment --json   # explicit level still forces it
 tinycloud probe "renewal call" --in collection:col_123 --scope file \
   --filter "source_metadata.parties.email~=%@acme.com" --json   # filter by stored fields (0.3.15+)
 tinycloud ask "What objections came up?" --in ./demo.mp4 --json
@@ -126,12 +127,14 @@ tinycloud library collections create my-desc --type media-descriptions --describ
 # The API default is speech+summary ONLY (no visuals/scene text) and it is IMMUTABLE after create —
 # pass --describe full when visual probe/ask queries matter. `show` reports describe_config.
 tinycloud library collections add ./demo.mp4 --to col_desc --json              # uploads a local source first; enrichment is async (pending)
-tinycloud library collections show col_desc --json                            # poll files[].status until completed, then query —
+tinycloud library collections show col_desc --json                            # poll files[].status until completed, then query
+# (metadata/entities rows also report files[].searchable_status, 0.3.20+ — completed = probe/ask can find the file);
 # the collection's --type decides the read verb (each line below is a DIFFERENT, matching-type collection):
 tinycloud ask "what's discussed?" --in collection:col_desc --json             #   media-descriptions → ask / probe / search
 tinycloud face search ./person.jpg --in collection:col_faces --json           #   face-analysis      → face list / face search
-tinycloud library collections entities col_ents ./demo.mp4 --json             #   entities           → collections entities
-tinycloud probe "kickoff" --in collection:col_meta --scope file --json        #   metadata (free, no processing) → probe --scope file / ask
+tinycloud library collections entities col_ents ./demo.mp4 --json             #   entities           → collections entities / probe / ask (0.3.20+)
+tinycloud probe "acme corp" --in collection:col_ents --json                   #   entities are indexed for search free after each extraction
+tinycloud probe "kickoff" --in collection:col_meta --scope file --json        #   metadata (free, no processing) → probe / ask (file-level)
 tinycloud query "top entities by file count?" --in collection:col_ents --json #   ANY type → query for analytics (count/group/join, 0.3.17+)
 tinycloud library collections remove cloudglue://files/<id> --from col_desc --json
 tinycloud library collections delete col_desc --json
@@ -152,6 +155,9 @@ tinycloud publish video ./demo.mp4 --visibility public --json
 tinycloud publish video ./demo.mp4 --clip-start 18 --clip-end 33 --json
 # Hard clip — the share page plays ONLY the moment (0.3.8+)
 tinycloud publish video ./demo.mp4 --clip-start 18 --clip-end 33 --clip-only --json
+# Playable Slack unfurl (0.3.20+, ASK THE USER FIRST): the pasted link plays inline in Slack
+tinycloud publish video ./demo.mp4 --visibility private --link-preview player --json
+tinycloud publish ./site --link-preview player --preview-share <share-id> --json   # site link plays its hero share
 ```
 
 Per-verb details and all flags: [reference/verbs.md](reference/verbs.md).
@@ -208,10 +214,23 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   added to collections. Local `search` can match cached `see` results.
 - Do not pass `--background` to `ask`; background jobs exist only for tracked
   async ops (`watch`, `see`, `extract`).
+- `probe`/`ask` scope (0.3.20+): omit `--scope` for AUTO — the search picks
+  the right level for the collection (media, metadata, or entities) itself,
+  so you no longer need to know a collection's type before probing it. An
+  explicit `--scope` still forces a level: `metadata` and video-level
+  `entities` collections are file-level (`--scope segment` errors);
+  segment-level `entities` collections search at `--scope segment` — and
+  collections created by `collections create --type entities` are
+  segment-level by default.
+- Entity search (0.3.20+): an `entities` collection is a first-class
+  `probe`/`ask` target — each file's latest completed extraction is indexed
+  into search documents for free. `probe` FINDS entity content (segment hits
+  carry real timestamps); `query` still MEASURES it. Wait for
+  `files[].searchable_status == "completed"` in `collections show` before
+  expecting hits.
 - `probe --filter` works only with a collection scope (`--in
-  collection:col_…`), and a `metadata` collection is file-level — probe it
-  with `--scope file` (segment scope errors). `source_metadata.*` filters are
-  file-level facts too, so pair them with `--scope file`.
+  collection:col_…`). `source_metadata.*` filters are file-level facts, so
+  pair them with `--scope file`.
 - `query` (0.3.17+) is for analytics, not search: when the task is to COUNT,
   GROUP, rank, or join across a collection ("how many…", "which … most",
   "total hours per host"), reach for `query`, not `probe`/`ask`. Run `query
@@ -265,6 +284,16 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   link (content and playback stay sign-in gated), and platforms cache per exact
   URL, so turning it back off does not retract posted cards. Details in
   [reference/verbs.md](reference/verbs.md).
+- Playable Slack unfurls (0.3.20+): `--link-preview player` upgrades the
+  Slack card to an **inline player** (via the Cloudglue Slack app; implies the
+  `full` card). A private share plays itself; a site — public or private —
+  plays the hero share set with `--preview-share <share-id>` (a public site's
+  hero must be a public share; public *shares* already unfurl playable, no
+  flag needed). Private content plays only in Slack workspaces the account
+  owner has connected in the Cloudglue dashboard. ⚠️ Anyone who can see the
+  Slack message can play the video — always ask the user before opting
+  private content in; downgrading to `full`/`none` revokes playback in
+  already-posted unfurls. Details in [reference/verbs.md](reference/verbs.md).
 - Live-API components (0.3.6+; the fuller v8–v12 surface is taught from
   0.3.18): the same embed script also defines collection-scoped,
   **private-site-only** elements that let viewers search/chat/query inside a
