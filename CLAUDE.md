@@ -287,6 +287,38 @@ failures: it gains the 0.3.7 chat-retry layer (`TINYCLOUD_MODEL_RETRIES` now
 covers both agents), and an errored turn is truthful — `✖ turn failed` on
 stderr, an `error` field in the `--json` trace, exit 1 (previously a
 backend blip could exit 0 with an empty, zero-usage trace).
+0.3.20 picks up SDK 0.7.24 and adds **playable Slack unfurls and entity
+search** (features 42→45, verbs stay 17): `--link-preview` on `publish` and
+`publish video` gains a `player` level (feature
+`publish.link.preview.player.v1`) — the pasted link unfurls in Slack with an
+INLINE PLAYER via the Cloudglue Slack app instead of a static card. On a
+private share, `player` makes the share itself play; a site plays its hero
+share, set with the new site-only `--preview-share <share-id>` flag (requires
+`--link-preview player`; `""` clears; without a hero the unfurl stays
+card-only). Unlike `full`, `player` matters on BOTH site visibilities — a
+public site's hero must be a public share, and public *shares* already unfurl
+playable with no flag. Private content plays only in Slack workspaces the
+account owner connected in the Cloudglue dashboard; `player` implies the
+`full` card, anyone who can see the Slack message can play the video (every
+doc surface says ask the user first), and downgrading revokes playback in
+already-posted unfurls. The card-field flags now accept `full` or `player`;
+the hero comes back as `data.preview_share_id` and in `publish list` rows as
+`link-preview=player hero=<id>`. Entity search (features `probe.entities.v1`
+/ `probe.scope.auto.v1`): an `entities` collection is a first-class
+`probe`/`ask` target — each file's latest completed extraction is indexed
+into search documents for free; video-level extractions search at `--scope
+file`, segment-level at `--scope segment` (tinycloud-created entities
+collections are segment-level by default), and omitting `--scope` is now AUTO
+(the search picks the level per scope, so probing no longer requires knowing
+the collection type — previously an omitted scope meant segment-only).
+`collections show` file rows gain `searchable_status` (the metadata/entity
+search-index readiness signal, distinct from the enrichment `status`), and
+the SDK bump also makes `publish video list`'s file filter bind server-side
+(the SDK previously sent camelCase query keys the API ignored; tinycloud's
+client-side filter masked it). Because the skill teaches the new
+flag values and probe semantics, the floor was raised to 0.3.20 (same
+merge-after-CDN gate — the dist PR merges only after CDN `channels.stable` =
+0.3.20).
 The host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
@@ -339,9 +371,9 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.19 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0 through 0.3.19, with `manifest.json` + `.sha256`
-  sidecars; `channels.stable` = 0.3.19); all smoke legs are required.
+- The live CDN serves 0.3.20 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0 through 0.3.20, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.20); all smoke legs are required.
 - `publish-npm.yml` (tag `v*`): asserts tag == package.json version → gates
   on `generate-manifest.mjs --check` against the live CDN → publishes via
   npm trusted publishing (OIDC, `id-token: write`, npm ≥ 11.5.1 — no token

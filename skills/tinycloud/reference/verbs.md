@@ -155,10 +155,31 @@ place during the scan, nothing is re-billed).
 ### probe — semantic search (cloud)
 
 ```bash
-tinycloud probe "<query>" --in collection:col_… [--scope file|segment] [--limit 20]
+tinycloud probe "<query>" --in collection:col_… [--limit 20]          # no --scope = AUTO (0.3.20+)
+tinycloud probe "<query>" --in collection:col_… --scope file|segment  # force a level
 tinycloud probe "<query>" --in collection:col_… --scope file \
   --filter "source_metadata.host_email=kevin@acme.com" --filter "source_metadata.tags*=demo,intro"
 ```
+
+**Auto scope (0.3.20+, feature `probe.scope.auto.v1`)**: omit `--scope` and
+the search picks the right level for the collection itself (and can fan out
+to file + segment plans and fuse the results) — so a bare
+`probe "<q>" --in collection:<id>` works on media-descriptions, metadata, and
+entities collections alike, without knowing the collection's type first. An
+explicit `--scope` forces the level and must be supported by the collection:
+`metadata` and video-level `entities` collections are file-level
+(`--scope segment` errors); segment-level `entities` collections search at
+`segment`.
+
+**Entity search (0.3.20+, feature `probe.entities.v1`)**: an `entities`
+collection is a first-class probe target — each file's latest completed
+extraction is indexed into search documents for free after the extract job.
+Video-level extractions surface as file hits; segment-level ones as segment
+hits with real start/end times (citations resolve like media segments) —
+collections created by `library collections create --type entities` are
+segment-level by default, so expect segment hits. Wait
+for `files[].searchable_status == "completed"` in `collections show` before
+expecting hits. `probe` FINDS entity content; `query` MEASURES it.
 
 `--filter <path[op]value>` (0.3.15+, feature `probe.filters.v1`; repeatable,
 ANDed, collection scopes only) narrows the searched set by stored fields
@@ -175,9 +196,9 @@ through arrays match when ANY element matches; ISO datetime fields compare as
 strings with `<`/`>`), `metadata.*` (user metadata from `collections add
 --metadata`), `video_info.duration_seconds|has_audio`, and
 `file.filename|bytes|uri|created_at|id`. source_metadata filters are
-file-level facts — pair them with `--scope file`. Probing a `metadata`
-collection requires `--scope file` (its documents are file-level; segment
-scope errors).
+file-level facts — pair them with `--scope file`. A `metadata` collection is
+file-level: probe it with `--scope file` or no `--scope` at all (auto);
+explicit `--scope segment` errors.
 
 ### ask — grounded Q&A (cloud)
 
@@ -186,6 +207,9 @@ tinycloud ask "<question>" --in <source|collection:col_…|all>
   [--include-citations[=false]]
 ```
 
+`ask` accepts the same collection scopes as `probe` — media-descriptions,
+rich-transcripts, metadata, and (0.3.20+) entities collections; the answer
+grounds itself in whichever document kinds the collection carries.
 Never pass `--background` to `ask`.
 
 ### query — structured analytics over collections (cloud, 0.3.17+)
@@ -370,7 +394,12 @@ completed`; `failed` is terminal) — a query before then returns empty or error
 `has_more`, and `next_page_token` — page with `--page-token` until the token
 is null (0.3.16+, feature `library.collections.pagination.v1`; earlier
 binaries capped every listing at 50 with a wrong `has_more: false` and a
-redacted token, so a >50-file collection could not be enumerated).
+redacted token, so a >50-file collection could not be enumerated). Each file
+row's `status` is the enrichment readiness (poll to `completed` before
+querying); on metadata and entities collections rows also carry
+`searchable_status` (0.3.20+) — the search-index readiness for the file's
+metadata/entity documents (`completed` = findable via `probe`/`ask`; it can
+lag `status` briefly while docs index).
 
 The collection's `--type` decides which verb reads it (every type follows the
 same `create → add → poll show → query → delete` lifecycle):
@@ -379,9 +408,9 @@ same `create → add → poll show → query → delete` lifecycle):
 |---|---|
 | `media-descriptions` (default) | `ask` / `probe` / `search` (`--in collection:<col>`) |
 | `face-analysis` | `face list` / `face search` |
-| `entities` (needs `--prompt`/`--schema`) | `library collections entities <col> <source>` |
+| `entities` (needs `--prompt`/`--schema`) | `library collections entities <col> <source>`; also `probe` / `ask` (0.3.20+ — entities are search-indexed free) |
 | `rich-transcripts` | `collections sync --artifacts transcripts` |
-| `metadata` (0.3.15+, free) | `probe --scope file` / `ask` |
+| `metadata` (0.3.15+, free) | `probe` / `ask` (file-level; omit `--scope` or use `--scope file`) |
 
 Every type is additionally queryable with `query` (0.3.17+) for analytics —
 counts, group-bys, joins over file attributes, user/connector metadata, and
@@ -397,8 +426,9 @@ index connector `source_metadata` plus user `--metadata` fields into
 file-level search documents WITHOUT downloading or processing the media —
 indexing is free and near-instant (no describe/transcribe jobs, so `add`
 readiness is quick). Add google-drive, dropbox, zoom, gong, recall, grain, or
-iconik URIs/share links (or already-synced files) and query with
-`probe --scope file` (segment scope errors) or `ask`, using `--filter` on
+iconik URIs/share links (or already-synced files) and query with `probe`
+(omit `--scope` for auto, or `--scope file`; explicit segment scope errors)
+or `ask`, using `--filter` on
 `source_metadata.*`/`metadata.*` paths to narrow. Use one to triage a large
 connector library (titles, participants, dates, tags) before paying for full
 processing in a `media-descriptions` collection.
@@ -481,7 +511,8 @@ tinycloud workflow <name> <source> [--param k=v] [--segment <s>] [--out <dir>]
 ```bash
 tinycloud publish <html-file-or-dir> [--name <site-name>]
   [--visibility public|private]
-  [--link-preview none|full] [--preview-title <text>] [--preview-image <url>] --json
+  [--link-preview none|full|player] [--preview-title <text>] [--preview-image <url>]
+  [--preview-share <share-id>] --json
 tinycloud publish list --json                       # sites for this account, with URLs
 tinycloud publish unpublish <site-ref> --json       # site_id, site name, or the --name label
 ```
@@ -529,10 +560,12 @@ completely differently:
 `--link-preview` is flippable on an **existing** site without republishing
 content: the run reports `action: "settings-only"` (a settings PATCH, no
 re-upload, no new version). The state comes back as `data.link_preview` (plus
-`data.preview_title` / `data.preview_image_url`) and shows in `publish list`
-rows as `link-preview=full`. `--preview-title`/`--preview-image` require
-`--link-preview full`, and a non-absolute `--preview-image` errors before any
-upload.
+`data.preview_title` / `data.preview_image_url` / `data.preview_share_id`)
+and shows in `publish list` rows as `link-preview=full` or
+`link-preview=player hero=<id>`. `--preview-title`/`--preview-image` require
+`--link-preview full` or `player`, `--preview-share` requires
+`--link-preview player`, and a non-absolute `--preview-image` errors before
+any upload.
 
 ⚠️ **Ask the user before opting a private site in.** `--link-preview full`
 makes the card title, the site description, and the card image readable by
@@ -542,12 +575,26 @@ or cookies; the site stays sign-in gated). Platforms cache per exact URL and
 rehost the image, so flipping back to `none` stops *future* unfurls but does
 not retract already-posted cards.
 
+**Playable Slack unfurls (0.3.20+, `publish.link.preview.player.v1`)** —
+`--link-preview player` upgrades the Slack unfurl from a static card to an
+**inline player** (via the Cloudglue Slack app; other platforms still show
+the card). It implies the `full` card, so every card rule above applies. A
+site plays its **hero share**, set with `--preview-share <share-id>` (a share
+id from `publish video`; without one the unfurl stays card-only; pass `""` to
+clear). Unlike `full`, `player` matters on **both** visibilities: a public
+site's hero must be a **public** share, and a private site's hero plays only
+in Slack workspaces the account owner has connected in the Cloudglue
+dashboard (Settings → Slack) — everywhere else the link falls back to the
+ordinary card. ⚠️ Anyone who can see the Slack message can play the video —
+ask the user before opting private content in. Downgrading to `full`/`none`
+revokes playback in already-posted unfurls (posted cards are not retracted).
+
 ### publish video — share a video
 
 ```bash
 tinycloud publish video <source> [--visibility public|private]   # default public
   [--name <title>] [--segment-id <id>] [--clip-start <s> --clip-end <e> [--clip-only]]
-  [--link-preview none|full] --json
+  [--link-preview none|full|player] --json
 tinycloud publish video list [--in <source>] [--visibility public|private] --json
 tinycloud publish video unpublish <share-id | source> --json   # --visibility disambiguates
 ```
@@ -591,10 +638,20 @@ feature id.
   "Sign in" card unless you pass `--link-preview full`, which serves bots a
   metadata-only stub built from those same three fields. It comes back as
   `data.share.link_preview`, and re-running flips it on an existing share
-  (a PATCH — no new share). Playback stays sign-in gated in every mode.
+  (a PATCH — no new share). Playback outside Slack stays sign-in gated in
+  every mode.
   ⚠️ Ask the user first: `full` makes the share's title, description, and
   thumbnail readable by anyone who fetches the link, and platforms cache per
   exact URL, so turning it back off does not retract already-posted cards.
+- Playable Slack unfurls (0.3.20+, `publish.link.preview.player.v1`):
+  `--link-preview player` on a PRIVATE share lets the share itself play
+  inline when its link is pasted in a Slack workspace the account owner has
+  connected in the Cloudglue dashboard (implies the `full` card; elsewhere
+  the link falls back to the card). A PUBLIC share already unfurls playable
+  wherever the Cloudglue Slack app is installed — no flag needed. ⚠️ Anyone
+  who can see the Slack message can play the video — ask the user before
+  opting a private share in. Downgrading to `full`/`none` revokes playback in
+  already-posted unfurls.
 
 When generating custom site HTML around a `<cg-video>` embed, use the
 component's built-ins instead of reinventing them. It defaults to a
