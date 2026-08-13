@@ -144,6 +144,9 @@ tinycloud library collections delete col_desc --json
 tinycloud library collections create meetings --type metadata --json
 tinycloud library collections add zoom://uuid/<uuid> --to col_meta --metadata '{"deal":"acme"}' --json
 tinycloud library connectors refresh cloudglue://files/<id> --json   # re-fetch stale source_metadata, re-index (free)
+# Bulk metadata imports (0.3.21+) — load a WHOLE connector corpus in one free run (don't add files one at a time):
+tinycloud library imports create col_meta --name "drive backfill" --connector <connector-id> --json   # → pending; first run starts now
+tinycloud library imports show col_meta <import-id> --json           # poll: pending while running, ready when settled → probe/ask
 
 # Publish an HTML artifact to Cloudglue Sites (manage with list / unpublish)
 tinycloud publish ./tinycloud-output/html/report.html --name report --visibility private --json
@@ -231,6 +234,13 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
 - `probe --filter` works only with a collection scope (`--in
   collection:col_…`). `source_metadata.*` filters are file-level facts, so
   pair them with `--scope file`.
+- `library imports` (0.3.21+): to load a WHOLE connector corpus into a
+  metadata collection, create a bulk import instead of `add`/`sync`ing files
+  one at a time — free, no media processing. `imports create`/`imports run`
+  return `pending` while the run executes; poll `imports show <col>
+  <import-id>` until the envelope is `ready` before querying. One run may be
+  active per collection at a time; definitions are immutable (delete +
+  recreate to change filters); cancel/delete never remove imported files.
 - `query` (0.3.17+) is for analytics, not search: when the task is to COUNT,
   GROUP, rank, or join across a collection ("how many…", "which … most",
   "total hours per host"), reach for `query`, not `probe`/`ask`. Run `query
