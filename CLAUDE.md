@@ -319,6 +319,32 @@ client-side filter masked it). Because the skill teaches the new
 flag values and probe semantics, the floor was raised to 0.3.20 (same
 merge-after-CDN gate — the dist PR merges only after CDN `channels.stable` =
 0.3.20).
+0.3.21 picks up SDK 0.7.25 (spec v0.7.17) and adds **bulk connector metadata
+imports** (features 45→46: `library.collections.imports.v1`; verbs stay 17 —
+`imports` is a `library` subcommand family, not a verb): `library imports
+create <col> --name <n> --connector <id>` saves an immutable definition that
+lists a data connector server-side (google-drive, dropbox, zoom, gong,
+recall, grain, iconik — not S3/GCS) and imports each matching file's
+source_metadata into a METADATA collection as collection files — thousands
+to hundreds of thousands of records per run, no media processing, runs
+consume no credits. Filters are listing passes reusing the `connectors
+files` flags (or `--filters '<json-array>'` for several passes — Dropbox
+listing is non-recursive, one pass per folder; unsupported keys are a 400
+at create, never dropped; Zoom/Gong pin their 6-month lookback into the
+stored filters at create; iconik caps 10k rows per set). Modes: `append`
+(default) imports new files + retries failures; `refresh` re-imports
+everything matched and alone honors `--delete-missing` (sweeps ONLY files
+this import brought in; a `--max-files`-capped run never sweeps).
+`--rate-limit` (clamped per connector) and `--thumbnails` (Grain/iconik
+posters) tune runs; `--no-start` saves without running. `imports
+list`/`show` page run history; `create`/`run`/`show` report envelope status
+`pending` while a run executes (with an `imports show` next-hint, mirroring
+`query --background`) and `ready` once settled; one run may be active per
+collection (busy trigger = rewritten retryable 409 error); `cancel`
+(defaults to the latest run) and `delete` never remove imported files.
+Because the skill teaches the subcommand family, the floor was raised to
+0.3.21 (same merge-after-CDN gate — the dist PR merges only after CDN
+`channels.stable` = 0.3.21).
 The host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
@@ -371,9 +397,9 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.20 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0 through 0.3.20, with `manifest.json` + `.sha256`
-  sidecars; `channels.stable` = 0.3.20); all smoke legs are required.
+- The live CDN serves 0.3.21 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0 through 0.3.21, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.21); all smoke legs are required.
 - `publish-npm.yml` (tag `v*`): asserts tag == package.json version → gates
   on `generate-manifest.mjs --check` against the live CDN → publishes via
   npm trusted publishing (OIDC, `id-token: write`, npm ≥ 11.5.1 — no token

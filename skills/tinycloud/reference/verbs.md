@@ -336,7 +336,7 @@ finds the query face across one or more collections (`--min-score`,
 `--group-by file`). `total` reports the server-available count across all modes
 (never rewritten by client `--min-*`/`--limit` filters).
 
-### library — collections and connectors
+### library — collections, connectors, and bulk metadata imports
 
 ```bash
 tinycloud library collections list --json
@@ -353,6 +353,16 @@ tinycloud library connectors files <connector-id> [--limit 25] [--page-token <t>
 tinycloud library connectors inspect [<connector-id>] <uri-or-share-link> --json   # metadata peek, no file created (0.3.11+)
 tinycloud library connectors refresh <file-id|cloudglue-uri|connector-url> --json  # re-fetch stored source_metadata (0.3.15+)
 tinycloud library connectors sync [<connector-id>] <uri-share-link-or-public-url> --json
+# Bulk metadata imports (0.3.21+) — load a whole connector corpus into a METADATA collection, free:
+tinycloud library imports create <col_id> --name <name> --connector <connector-id> \
+  [--from <date> --to <date> --title-search <t> --folder-id <id> --path <p> --team <t> --meeting-type <t> \
+   | --filters '<json-array|file.json>'] \
+  [--mode append|refresh] [--delete-missing] [--rate-limit <n>] [--max-files <n>] [--thumbnails] [--no-start] --json
+tinycloud library imports list <col_id> [--limit <n>] [--offset <n>] --json
+tinycloud library imports show <col_id> <import-id> [--limit <n>] [--offset <n>] --json   # run history; PENDING while a run executes
+tinycloud library imports run <col_id> <import-id> [--mode append|refresh] [--delete-missing|--no-delete-missing] [--max-files <n>] [--thumbnails|--no-thumbnails] --json
+tinycloud library imports cancel <col_id> <import-id> [<run-id>] --json   # no run-id = the latest (only possibly-active) run
+tinycloud library imports delete <col_id> <import-id> --json              # imported files always stay
 ```
 
 `collections create|add|remove|delete` are the only writes in an otherwise
@@ -432,6 +442,42 @@ or `ask`, using `--filter` on
 `source_metadata.*`/`metadata.*` paths to narrow. Use one to triage a large
 connector library (titles, participants, dates, tags) before paying for full
 processing in a `media-descriptions` collection.
+
+**Bulk metadata imports** (0.3.21+, feature `library.collections.imports.v1`)
+are the bulk path INTO a metadata collection — never `add`/`sync` files one
+at a time when a whole corpus is wanted. `library imports create <col> --name
+<n> --connector <id>` saves a definition that lists the connector server-side
+(google-drive, dropbox, zoom, gong, recall, grain, iconik — not S3/GCS) and
+imports every matching file's `source_metadata` as collection files:
+thousands to hundreds of thousands of records per run, **free — runs consume
+no credits**. The first run starts immediately (`--no-start` saves the
+definition only), and `create`/`imports run` return **`pending`** while a run
+executes — poll `imports show <col> <import-id>` until the envelope goes
+`ready` (progress counters inline: listed, created, updated, skipped,
+indexed, failed, removed), then query with `probe`/`ask`.
+
+Filters are listing passes reusing the `connectors files` flags (`--from`/
+`--to` YYYY-MM-DD UTC, `--title-search`, `--folder-id` Drive, `--path`
+Dropbox — non-recursive, so cover a tree with one pass per folder via
+`--filters '[{"path":"/a"},{"path":"/b"}]'` — `--team`/`--meeting-type`
+Grain); a key the connector can't honor is a clear 400 at create, never
+silently dropped, and no filters means one unfiltered pass over everything.
+Zoom/Gong pin their 6-month default lookback into the stored filters at
+create (pass `--from` to control the window); iconik caps 10k results per
+filter set (split by date windows). Modes: `append` (default) imports new
+files and retries previously-failed ones; `refresh` re-imports everything
+matched, and only refresh runs honor `--delete-missing` (removes ONLY files
+this import brought in that the source stopped returning; a
+`--max-files`-capped run never sweeps). `--rate-limit` tunes upstream
+listing requests/sec (per-connector safe defaults, clamped);
+`--thumbnails` copies Grain/iconik poster images (off by default — slows
+large iconik imports). Definitions are **immutable** (delete + recreate to
+change one); **one run may be active per collection** — triggering while
+busy errors with a clear retryable message; `imports cancel` stops the
+active run (already-imported files stay) and `imports delete` removes the
+definition + run history but never the imported files. On pre-0.3.21
+binaries every `imports` subcommand fails with an unknown-command error —
+fall back to per-file `collections add` / `connectors sync`.
 
 `connectors sync` materializes its argument into a Cloudglue file without
 starting analysis (idempotent). The connector id is optional — with just a
