@@ -336,7 +336,7 @@ finds the query face across one or more collections (`--min-score`,
 `--group-by file`). `total` reports the server-available count across all modes
 (never rewritten by client `--min-*`/`--limit` filters).
 
-### library — collections, connectors, and bulk metadata imports
+### library — collections, connectors, and bulk imports
 
 ```bash
 tinycloud library collections list --json
@@ -349,18 +349,19 @@ tinycloud library collections remove <source> --from <col_id> --json
 tinycloud library collections delete <col_id> --json
 tinycloud library collections entities <col_id> <source> [--limit <n>] [--offset <n>] --json   # read a video's entities
 tinycloud library connectors list --json
-tinycloud library connectors files <connector-id> [--limit 25] [--page-token <t>] --json
+tinycloud library connectors files <connector-id> [--limit 25] [--page-token <t>] [--path <folder> [--recursive]] --json   # --recursive: Dropbox subtree (0.3.22+)
 tinycloud library connectors inspect [<connector-id>] <uri-or-share-link> --json   # metadata peek, no file created (0.3.11+)
 tinycloud library connectors refresh <file-id|cloudglue-uri|connector-url> --json  # re-fetch stored source_metadata (0.3.15+)
 tinycloud library connectors sync [<connector-id>] <uri-share-link-or-public-url> --json
-# Bulk metadata imports (0.3.21+) — load a whole connector corpus into a METADATA collection, free:
+# Bulk imports (0.3.21+) — load a whole connector corpus in one run. Into a METADATA
+# collection: source_metadata only, free. Into ANY OTHER type: the media itself, BILLED PER FILE (0.3.22+).
 tinycloud library imports create <col_id> --name <name> --connector <connector-id> \
-  [--from <date> --to <date> --title-search <t> --folder-id <id> --path <p> --team <t> --meeting-type <t> \
+  [--from <date> --to <date> --title-search <t> --folder-id <id> --path <p> --recursive --team <t> --meeting-type <t> \
    | --filters '<json-array|file.json>'] \
-  [--mode append|refresh] [--delete-missing] [--rate-limit <n>] [--max-files <n>] [--thumbnails] [--no-start] --json
+  [--mode append|refresh] [--delete-missing] [--rate-limit <n>] [--max-files <n>] [--thumbnails] [--enrich-metadata] [--no-start] --json
 tinycloud library imports list <col_id> [--limit <n>] [--offset <n>] --json
 tinycloud library imports show <col_id> <import-id> [--limit <n>] [--offset <n>] --json   # run history; PENDING while a run executes
-tinycloud library imports run <col_id> <import-id> [--mode append|refresh] [--delete-missing|--no-delete-missing] [--max-files <n>] [--thumbnails|--no-thumbnails] --json
+tinycloud library imports run <col_id> <import-id> [--mode append|refresh] [--delete-missing|--no-delete-missing] [--max-files <n>] [--thumbnails|--no-thumbnails] [--enrich-metadata|--no-enrich-metadata] --json
 tinycloud library imports cancel <col_id> <import-id> [<run-id>] --json   # no run-id = the latest (only possibly-active) run
 tinycloud library imports delete <col_id> <import-id> --json              # imported files always stay
 ```
@@ -443,41 +444,77 @@ or `ask`, using `--filter` on
 connector library (titles, participants, dates, tags) before paying for full
 processing in a `media-descriptions` collection.
 
-**Bulk metadata imports** (0.3.21+, feature `library.collections.imports.v1`)
-are the bulk path INTO a metadata collection — never `add`/`sync` files one
-at a time when a whole corpus is wanted. `library imports create <col> --name
-<n> --connector <id>` saves a definition that lists the connector server-side
-(google-drive, dropbox, zoom, gong, recall, grain, iconik — not S3/GCS) and
-imports every matching file's `source_metadata` as collection files:
-thousands to hundreds of thousands of records per run, **free — runs consume
-no credits**. The first run starts immediately (`--no-start` saves the
-definition only), and `create`/`imports run` return **`pending`** while a run
-executes — poll `imports show <col> <import-id>` until the envelope goes
-`ready` (progress counters inline: listed, created, updated, skipped,
-indexed, failed, removed), then query with `probe`/`ask`.
+**Bulk imports** (0.3.21+, feature `library.collections.imports.v1`) are the
+bulk path INTO a collection — never `add`/`sync` files one at a time when a
+whole corpus is wanted. `library imports create <col> --name <n> --connector
+<id>` saves a definition that lists the connector server-side (google-drive,
+dropbox, zoom, gong, recall, grain, iconik — not S3/GCS) and brings every
+matching file into the collection.
+
+**What a run ingests follows the TARGET COLLECTION's type**, inferred at
+create, fixed for the import's life, and reported as `import_type` on the
+definition and on every run:
+
+| Target collection | `import_type` | What a run does | Cost |
+|---|---|---|---|
+| `metadata` | `metadata` | imports each file's `source_metadata` as a collection file — no media download or processing | **free** (no credits) |
+| anything else (`media-descriptions`, `entities`, `rich-transcripts`, `face-analysis`) | `media` | ingests and processes the media itself, exactly like `collections add` | **billed per file** (0.3.22+, feature `library.collections.imports.media.v1`) |
+
+A **media** import counts against the account's file usage limits, so **ask
+the user before starting one** and cap it with `--max-files` (media runs also
+stop at 10000 files/run whatever `--max-files` says). A media run that
+exhausts credits or a usage limit stops with a clear error and keeps
+everything it already imported — rerun in `append` mode to resume. On a media
+import, `refresh` re-syncs already-imported files' source metadata only;
+media bytes are never re-downloaded. The create/run summary names the kind
+("Created media import ...") and carries the per-file billing warning, so
+read `data.import.import_type` (or the summary) before assuming a run is
+free.
+
+The first run starts immediately (`--no-start` saves the definition only),
+and `create`/`imports run` return **`pending`** while a run executes — poll
+`imports show <col> <import-id>` until the envelope goes `ready` (progress
+counters inline: listed, created, updated, skipped, imported, indexed,
+enriched, failed, removed), then query with `probe`/`ask`.
 
 Filters are listing passes reusing the `connectors files` flags (`--from`/
 `--to` YYYY-MM-DD UTC, `--title-search`, `--folder-id` Drive, `--path`
-Dropbox — non-recursive, so cover a tree with one pass per folder via
+Dropbox — direct children unless `--recursive` walks the whole subtree
+(0.3.22+, feature `library.connectors.recursive.v1`), so a tree is either one
+recursive pass or one pass per folder via
 `--filters '[{"path":"/a"},{"path":"/b"}]'` — `--team`/`--meeting-type`
 Grain); a key the connector can't honor is a clear 400 at create, never
 silently dropped, and no filters means one unfiltered pass over everything.
-Zoom/Gong pin their 6-month default lookback into the stored filters at
-create (pass `--from` to control the window); iconik caps 10k results per
-filter set (split by date windows). Modes: `append` (default) imports new
-files and retries previously-failed ones; `refresh` re-imports everything
-matched, and only refresh runs honor `--delete-missing` (removes ONLY files
-this import brought in that the source stopped returning; a
+In a `--filters` set, `recursive` is the STRING `"true"`/`"false"`, not a
+JSON boolean. Zoom/Gong pin their 6-month default lookback into the stored
+filters at create (pass `--from` to control the window); iconik caps 10k
+results per filter set (split by date windows). Modes: `append` (default)
+imports new files and retries previously-failed ones; `refresh` re-imports
+everything matched, and only refresh runs honor `--delete-missing` (removes
+ONLY files this import brought in that the source stopped returning; a
 `--max-files`-capped run never sweeps). `--rate-limit` tunes upstream
-listing requests/sec (per-connector safe defaults, clamped);
-`--thumbnails` copies Grain/iconik poster images (off by default — slows
-large iconik imports). Definitions are **immutable** (delete + recreate to
-change one); **one run may be active per collection** — triggering while
-busy errors with a clear retryable message; `imports cancel` stops the
-active run (already-imported files stay) and `imports delete` removes the
-definition + run history but never the imported files. On pre-0.3.21
-binaries every `imports` subcommand fails with an unknown-command error —
-fall back to per-file `collections add` / `connectors sync`.
+listing requests/sec (per-connector safe defaults, clamped).
+
+`--thumbnails` and `--enrich-metadata` are **metadata-import only** — either
+one on a media import is a clear upstream error (imported media gets real
+thumbnails from the processing pipeline, and a media run has no
+metadata-only record to enrich). `--thumbnails` copies Grain/iconik poster
+images (off by default — slows large iconik imports). `--enrich-metadata`
+(0.3.22+, feature `library.collections.imports.enrich.v1`; off by default)
+backfills source-metadata fields the connector's listing omits, after each
+index batch settles: Gong parties + Call Spotlight content (batched, and the
+enriched documents are re-embedded so that content becomes searchable) and
+Dropbox `media_info` duration/dimensions (per-file). It is a no-op for other
+connectors and costs upstream API budget plus, for Gong, embedding work; the
+run's `files_enriched` counter reports how many records it backfilled.
+
+Definitions are **immutable** (delete + recreate to change one); **one run
+may be active per collection** — triggering while busy errors with a clear
+retryable message; `imports cancel` stops the active run (already-imported
+files stay) and `imports delete` removes the definition + run history but
+never the imported files. On pre-0.3.21 binaries every `imports` subcommand
+fails with an unknown-command error — fall back to per-file `collections
+add` / `connectors sync`.
 
 `connectors sync` materializes its argument into a Cloudglue file without
 starting analysis (idempotent). The connector id is optional — with just a
@@ -501,7 +538,9 @@ YouTube URLs cannot sync; use `tinycloud grab` instead.
 `connectors files` also takes provider-specific filters: `--from`/`--to`
 (dates — every provider except S3/GCS; Zoom and Gong default to the last
 6 months; Iconik filters on asset date_created), `--folder-id` (Google
-Drive), `--path` (Dropbox),
+Drive), `--path` (Dropbox — direct children only; add `--recursive` on
+0.3.22+ to walk the whole subtree under it, Dropbox only and built for bulk
+imports rather than interactive browsing),
 `--bucket`/`--prefix` (S3/GCS — bucket required), `--title-search` (Grain,
 Zoom, Google Drive, Dropbox, Gong, Iconik), `--team`/`--meeting-type`
 (Grain).
