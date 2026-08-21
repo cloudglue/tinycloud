@@ -144,9 +144,12 @@ tinycloud library collections delete col_desc --json
 tinycloud library collections create meetings --type metadata --json
 tinycloud library collections add zoom://uuid/<uuid> --to col_meta --metadata '{"deal":"acme"}' --json
 tinycloud library connectors refresh cloudglue://files/<id> --json   # re-fetch stale source_metadata, re-index (free)
-# Bulk metadata imports (0.3.21+) — load a WHOLE connector corpus in one free run (don't add files one at a time):
+# Bulk imports (0.3.21+) — load a WHOLE connector corpus in one run (don't add files one at a time).
+# Into a METADATA collection: source_metadata only, free. Into ANY OTHER type: the media itself, BILLED PER FILE.
 tinycloud library imports create col_meta --name "drive backfill" --connector <connector-id> --json   # → pending; first run starts now
 tinycloud library imports show col_meta <import-id> --json           # poll: pending while running, ready when settled → probe/ask
+tinycloud library imports create col_meta --name "dbx tree" --connector <id> --path /recordings --recursive --enrich-metadata --json  # 0.3.22+
+tinycloud library imports create col_desc --name "corpus" --connector <id> --max-files 50 --json   # 0.3.22+ MEDIA import — ask the user first, it bills per file
 
 # Publish an HTML artifact to Cloudglue Sites (manage with list / unpublish)
 tinycloud publish ./tinycloud-output/html/report.html --name report --visibility private --json
@@ -234,13 +237,25 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
 - `probe --filter` works only with a collection scope (`--in
   collection:col_…`). `source_metadata.*` filters are file-level facts, so
   pair them with `--scope file`.
-- `library imports` (0.3.21+): to load a WHOLE connector corpus into a
-  metadata collection, create a bulk import instead of `add`/`sync`ing files
-  one at a time — free, no media processing. `imports create`/`imports run`
-  return `pending` while the run executes; poll `imports show <col>
+- `library imports` (0.3.21+): to load a WHOLE connector corpus, create a
+  bulk import instead of `add`/`sync`ing files one at a time. **What a run
+  ingests follows the target collection's type**, reported as `import_type`:
+  into a `metadata` collection it imports source_metadata only — free, no
+  media processing; into ANY OTHER type (media-descriptions, entities,
+  rich-transcripts, face-analysis) it imports the MEDIA itself, processed
+  like a manual add and **billed per file** (0.3.22+). Ask the user before
+  starting a media import, and cap it with `--max-files` (media runs also
+  stop at 10000 files/run). A media run that runs out of credits keeps what
+  it imported — rerun in `append` mode to resume. `imports create`/`imports
+  run` return `pending` while the run executes; poll `imports show <col>
   <import-id>` until the envelope is `ready` before querying. One run may be
   active per collection at a time; definitions are immutable (delete +
   recreate to change filters); cancel/delete never remove imported files.
+  `--thumbnails` and `--enrich-metadata` are metadata-import only (either on
+  a media import is a clean upstream error); `--enrich-metadata` (0.3.22+)
+  backfills fields the connector listing omits — Gong parties + Call
+  Spotlight (re-embedded, so they become searchable) and Dropbox
+  `media_info` duration/dimensions.
 - `query` (0.3.17+) is for analytics, not search: when the task is to COUNT,
   GROUP, rank, or join across a collection ("how many…", "which … most",
   "total hours per host"), reach for `query`, not `probe`/`ask`. Run `query

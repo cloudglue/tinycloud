@@ -345,6 +345,44 @@ collection (busy trigger = rewritten retryable 409 error); `cancel`
 Because the skill teaches the subcommand family, the floor was raised to
 0.3.21 (same merge-after-CDN gate — the dist PR merges only after CDN
 `channels.stable` = 0.3.21).
+0.3.22 picks up SDK 0.7.28 (spec v0.7.21) and turns bulk imports into a
+**general collection loader** (features 46→49, verbs stay 17): the SDK's
+`metadataImports` namespace is renamed `bulkImports` (the old name stays as
+a back-compat alias, and tinycloud's adapter prefers the new one and falls
+back), and an import's `import_type` — inferred from the TARGET
+COLLECTION's type at create and fixed for the import's life — decides what
+a run ingests. A **metadata** collection still imports source_metadata only
+(free, no media processing); **any other** collection type
+(media-descriptions, entities, rich-transcripts, face-analysis) now imports
+the **media itself**, each file ingested and processed exactly like
+`collections add`, so it is **billed per file** and counts against the
+account's file usage limits (feature
+`library.collections.imports.media.v1`). Media runs are additionally capped
+at 10000 files per run whatever `--max-files` says, a run that exhausts
+credits or a usage limit stops and keeps everything already imported (rerun
+`append` to resume), and `refresh` on a media import re-syncs source
+metadata only — media bytes are never re-downloaded. Because the cost story
+now depends on the target collection, every summary names the kind
+("Created media import …") and a media create/run carries an explicit
+per-file billing warning, `imports list`/`show` render `type=media`, and
+run progress gains the `files_imported` counter. `--thumbnails` and the new
+`--enrich-metadata` are **metadata-import only** (either on a media import
+is a clean upstream 400): `--enrich-metadata` (feature
+`library.collections.imports.enrich.v1`, off by default) backfills
+source-metadata fields the connector's listing omits after each index batch
+settles — Gong parties + Call Spotlight content (batched and re-embedded,
+so the content becomes searchable) and Dropbox `media_info`
+duration/dimensions — reported by the new `files_enriched` counter, a no-op
+for other connectors, and costing upstream API budget plus (for Gong)
+embedding work. Dropbox listings gain `--recursive` on `connectors files`
+and as a `recursive` filter-set key on `imports create` (feature
+`library.connectors.recursive.v1`), walking the whole subtree under
+`--path` instead of its direct children — so a Dropbox tree is one
+recursive pass rather than one pass per folder; on the wire it is the
+STRING `"true"`/`"false"`, and tinycloud rejects any other spelling
+client-side. Because the skill teaches the media-import cost model and the
+new flags, the floor was raised to 0.3.22 (same merge-after-CDN gate — the
+dist PR merges only after CDN `channels.stable` = 0.3.22).
 The host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
@@ -397,9 +435,9 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.21 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0 through 0.3.21, with `manifest.json` + `.sha256`
-  sidecars; `channels.stable` = 0.3.21); all smoke legs are required.
+- The live CDN serves 0.3.22 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0 through 0.3.22, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.22); all smoke legs are required.
 - `publish-npm.yml` (tag `v*`): asserts tag == package.json version → gates
   on `generate-manifest.mjs --check` against the live CDN → publishes via
   npm trusted publishing (OIDC, `id-token: write`, npm ≥ 11.5.1 — no token
