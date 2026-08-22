@@ -47,6 +47,50 @@ jobs:
               json.load(open(p))
               print("OK", p)
           EOF
+      - name: Plugin + marketplace versions match package.json
+        # These three drifted apart once: plugin.json and marketplace.json sat
+        # at 0.3.19 through the 0.3.20 and 0.3.21 releases because nothing
+        # checked them. The npm package version is the release version, so
+        # every version field in the plugin metadata must equal it.
+        run: |
+          python3 - <<'EOF'
+          import json, sys
+          pkg = json.load(open("package.json"))["version"]
+          plugin = json.load(open(".claude-plugin/plugin.json"))["version"]
+          mkt = json.load(open(".claude-plugin/marketplace.json"))
+          found = {
+              "package.json": pkg,
+              ".claude-plugin/plugin.json": plugin,
+              ".claude-plugin/marketplace.json metadata.version": mkt["metadata"]["version"],
+          }
+          for entry in mkt["plugins"]:
+              found[f'.claude-plugin/marketplace.json plugins[{entry["name"]}].version'] = entry["version"]
+          bad = {k: v for k, v in found.items() if v != pkg}
+          for k, v in found.items():
+              print(f'{"ok  " if v == pkg else "DRIFT"} {k} = {v}')
+          if bad:
+              print(f"\nVersion drift against package.json ({pkg}): {bad}", file=sys.stderr)
+              sys.exit(1)
+          print(f"\nAll plugin metadata versions match package.json ({pkg}).")
+          EOF
+
+      - name: Skill manifest version matches package.json
+        # tinycloud-skill.json's skill_version tracks the release too (the
+        # floor fields min_version/supported_range are checked separately
+        # against preflight.sh, and may legitimately sit below on a no-raise
+        # release -- so only skill_version is pinned here).
+        run: |
+          python3 - <<'EOF'
+          import json, sys
+          pkg = json.load(open("package.json"))["version"]
+          skill = json.load(open("skills/tinycloud/tinycloud-skill.json"))["skill_version"]
+          print(f"package.json={pkg} tinycloud-skill.json skill_version={skill}")
+          if skill != pkg:
+              print(f"skill_version {skill} != package.json {pkg}", file=sys.stderr)
+              sys.exit(1)
+          print("ok")
+          EOF
+
       - name: Preflight requirements match tinycloud-skill.json
         run: |
           python3 - <<'EOF'
