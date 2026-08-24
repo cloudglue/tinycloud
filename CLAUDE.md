@@ -473,9 +473,9 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.22 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0 through 0.3.22, with `manifest.json` + `.sha256`
-  sidecars; `channels.stable` = 0.3.22); all smoke legs are required.
+- The live CDN serves 0.3.23 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0 through 0.3.23, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.23); all smoke legs are required.
 - `ci.yml` also pins every version field to `package.json`: plugin.json,
   marketplace.json (metadata + each plugin entry), and tinycloud-skill.json's
   `skill_version`. The plugin metadata had silently drifted to 0.3.19 through
