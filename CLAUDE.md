@@ -103,7 +103,8 @@ stdout (logs on stderr) with `status`:
 → exit codes 0/0/2/3/3/0/1. `tinycloud commands --json` is the authoritative
 flag list — verify doc claims against it, not memory (a doc bug shipped once
 because `--cached` only exists on watch/see/extract/caption/face/workflow). As
-of 0.3.15 there are 16 verbs: `see`
+of 0.3.23 there are 18 verbs (0.3.17 added `query`, 0.3.23 added
+`moments`): `see`
 (0.3.7+) analyzes an **image** (file-level,
 JPEG/PNG/WebP — the image counterpart of `watch`) and `extract` also takes
 an image source (features `see.v1`, `extract.images.v1`); 0.3.8 adds
@@ -383,6 +384,43 @@ STRING `"true"`/`"false"`, and tinycloud rejects any other spelling
 client-side. Because the skill teaches the media-import cost model and the
 new flags, the floor was raised to 0.3.22 (same merge-after-CDN gate — the
 dist PR merges only after CDN `channels.stable` = 0.3.22).
+0.3.23 picks up SDK 0.7.29 (spec v0.7.23) and adds **Find Moments** — the
+first new verb since `query` (verbs 17→18, features 49→52: `moments.v1`,
+`moments.collections.v1`, `moments.search.v1`). Where `probe`/`ask` FIND
+content semantically and `extract` pulls declared fields, `moments` sweeps a
+WHOLE video against a rubric the caller wrote and persists every window that
+qualifies. `tinycloud moments <source> --name <criterion> --instructions
+"<rubric>"` runs one criterion over one video; `--criterion '<json|file>'`
+takes the full rubric (`moment_schema` typed fields, `finding_schema`,
+`anchors`, one `scoring` key that populates each moment's `criterion_score`).
+The criterion is snapshotted and hashed onto the run (`criterion_hash`), so
+editing a rubric yields a different run rather than reinterpreting an old one;
+runs reuse a compatible describe or create one (`--describe-job` pins), and
+`--boundary` (sentence default), `--signals` (speech default), `--speakers`
+and duration bounds tune acceptance. Criterion NAMES are lowercase snake_case
+(`^[a-z][a-z0-9_]*$`, max 64) and tinycloud rejects anything else
+client-side — the API answers a bad name with a bare "Field(s) in the request
+are invalid" naming no field. `moments show|list|delete` manage run history
+(deleting an in-flight run refunds it; a completed one does not), and
+**`--limit`/`--min-score`/`--sort` are READ-TIME shaping, not selection**:
+every accepted moment stays persisted and `data.run.total_moments` always
+reports the full accepted count. Findings (`absence` | `observation`) are the
+non-temporal counterpart. `library collections create --type moments` makes a
+standing collection whose criteria run over every current AND future member —
+at least one criterion is REQUIRED at create (the type alone is a 400), and
+each entry is a criterion ATTACHMENT (the rubric wrapped in its run options),
+not a bare rubric. `library moments attach|detach|list|findings` manage and
+enumerate it: attaching is free while the per-file backfill runs bill as they
+execute, `--sort criterion-score|rank` requires `--criterion <name>` (scores
+compare only within one rubric), and detaching — or removing a file — drops
+moments from COLLECTION ENUMERATION only, leaving the runs as job history.
+`moments search` runs `/search` with `scope: "moment"` (the endpoint face
+search uses); it is deliberately NOT `probe --scope moment`, because probe
+runs on deep search whose scope levels are only file and segment. As of spec
+v0.7.23 `query` has no moments virtual tables and `ask`/responses have no
+moment awareness. Because the skill teaches the verb, the floor was raised to
+0.3.23 (same merge-after-CDN gate — the dist PR merges only after CDN
+`channels.stable` = 0.3.23).
 The host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
@@ -435,9 +473,13 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.22 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0 through 0.3.22, with `manifest.json` + `.sha256`
-  sidecars; `channels.stable` = 0.3.22); all smoke legs are required.
+- The live CDN serves 0.3.23 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0 through 0.3.23, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.23); all smoke legs are required.
+- `ci.yml` also pins every version field to `package.json`: plugin.json,
+  marketplace.json (metadata + each plugin entry), and tinycloud-skill.json's
+  `skill_version`. The plugin metadata had silently drifted to 0.3.19 through
+  two releases before that check existed.
 - `publish-npm.yml` (tag `v*`): asserts tag == package.json version → gates
   on `generate-manifest.mjs --check` against the live CDN → publishes via
   npm trusted publishing (OIDC, `id-token: write`, npm ≥ 11.5.1 — no token

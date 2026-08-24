@@ -17,6 +17,7 @@ every verb. Regenerate doubts from it instead of trusting prose.
 | `clip` | local | no | Cuts, thumbs, audio, stitch, split, transcode, burn, explore |
 | `grab` | network | no | Download a remote video (YouTube, TikTok, Loom, direct) |
 | `face` | cloud | yes | Detect faces in a video, or match/search a query face (0.3.4+) |
+| `moments` | cloud | yes | Sweep a whole video against a rubric you wrote, keeping every window that qualifies (0.3.23+) |
 | `library` | varies | no | Collections (incl. create/add/remove/delete), connectors, mirrors, sync |
 | `jobs` | network | yes | Poll/wait/forget tracked async jobs |
 | `workflow` | varies | no | Validate/plan/run workflow recipes |
@@ -336,6 +337,93 @@ finds the query face across one or more collections (`--min-score`,
 `--group-by file`). `total` reports the server-available count across all modes
 (never rewritten by client `--min-*`/`--limit` filters).
 
+### moments — find every moment that meets a rubric (cloud, 0.3.23+)
+
+```bash
+tinycloud moments <source> --name <criterion> --instructions "<rubric>" [options] --json
+tinycloud moments <source> --criterion '<json|file.json>' [options] --json
+tinycloud moments show <job-id> [--limit <n>] [--min-score <n>] [--sort rank|start] --json
+tinycloud moments list [--status <s>] [--url <u>] [--limit <n>] --json
+tinycloud moments delete <job-id> --json
+tinycloud moments search "<text>" --in collection:<col> [--criterion <name>] [--limit <n>] --json
+```
+
+`moments` is rubric-driven **discovery**: it sweeps a WHOLE video against a
+standard you wrote and persists every window that qualifies. It is the fourth
+retrieval shape and the easiest to reach for by mistake — keep them apart:
+
+| Verb | What it does |
+|---|---|
+| `probe` / `ask` | FIND content semantically |
+| `extract` | pull declared fields from known places |
+| `search` | local keyword grep over cached context |
+| **`moments`** | **measure a whole video against a rubric, keeping every hit** |
+
+**The criterion.** `--name` is a lowercase snake_case identifier
+(`^[a-z][a-z0-9_]*$`, max 64) — anything else is rejected client-side, because
+the API answers a bad name with a bare "Field(s) in the request are invalid"
+that names no field. `--instructions` is the rubric prose. For a richer rubric,
+`--criterion '<json|file.json>'` takes `{name, instructions, moment_schema,
+finding_schema, anchors, scoring}` — `moment_schema` declares typed fields on
+every moment, and one `scoring` key populates each moment's `criterion_score`.
+The criterion is snapshotted and hashed onto the run (`criterion_hash`), so
+editing a rubric produces a different run rather than reinterpreting an old one.
+
+**Run options.** `--describe-job` pins a describe (otherwise a compatible one is
+reused or created — a video with no describe is never an error); `--boundary
+sentence|tight|loose` (default sentence) sets how generously edges are drawn;
+`--signals` (default `speech`) sets the evidence a moment must rest on;
+`--speakers`, `--min-duration`, `--max-duration` narrow acceptance; `--refresh`
+forces a fresh sweep; `--background` returns `pending` with a poll hint.
+
+**`--limit` / `--min-score` / `--sort` are READ-TIME shaping, not selection.**
+Every accepted moment stays persisted and `data.run.total_moments` always
+reports the FULL accepted count — a narrowed read never means "that was all".
+Re-read the same run with `moments show <job-id>` and different shaping instead
+of re-running it.
+
+**Findings** are the non-temporal counterpart (`kind: absence | observation`):
+what the rubric established about the video as a whole, including that an
+expected thing never happened.
+
+`moments delete` on an IN-FLIGHT run cancels and refunds it; deleting a
+COMPLETED run is not refunded.
+
+**Moments collections** — a standing rubric over many videos:
+
+```bash
+tinycloud library collections create "sales-calls" --type moments \
+  --name objection_handling --instructions "An objection and the rep's response." --json
+tinycloud library moments attach <col> --name pricing_pushback --instructions "…" [--boundary tight] --json
+tinycloud library moments list <col> [--criterion <name>] [--min-score <n>] [--sort position|criterion-score|rank] --json
+tinycloud library moments findings <col> [--criterion <name>] [--kind absence|observation] --json
+tinycloud library moments detach <col> <attachment-id> --json
+```
+
+A moments collection's criteria run over every current **and future** member, so
+adding a video sweeps the standing rubrics over it automatically. **At least one
+criterion is REQUIRED at create** — the type alone is rejected; `--criterion`
+also accepts an ARRAY of rubrics.
+
+**Billing:** attaching a criterion is free; the per-file backfill runs it starts
+are billed as they execute, and a matching prior run (same rubric hash + file)
+satisfies a pair with no extra execution. Ask the user before attaching to a
+large collection. Track progress via `backfill_status` / `files_completed` /
+`files_total` on `collections show`.
+
+`--sort criterion-score|rank` **requires `--criterion <name>`** — scores only
+compare within one rubric, and the guard is client-side so it never reaches the
+API as an opaque 400. `moments detach`, and removing a file, drop the affected
+moments from COLLECTION ENUMERATION only; the underlying runs persist as job
+history and stay readable through `tinycloud moments`.
+
+**Searching moments** uses `moments search`, NOT `probe --scope moment` — probe
+runs on deep search, whose scope levels are only `file` and `segment`. As of
+spec v0.7.23 the `query` verb has no moments virtual tables and `ask`/responses
+have no moment awareness, so moments are discoverable and searchable but not yet
+countable via `query`. On pre-0.3.23 binaries the whole verb is an
+unknown-command error.
+
 ### library — collections, connectors, and bulk imports
 
 ```bash
@@ -343,7 +431,7 @@ tinycloud library collections list --json
 tinycloud library collections show <col_id> [--limit <n>] [--page-token <t>] --json   # files[].status: pending|processing|completed (readiness)
 tinycloud library collections sync <col_id> --artifacts descriptions,transcripts,thumbnails,metadata --json
 # Collection writes (0.3.4+) — the only write paths in library:
-tinycloud library collections create <name> [--type media-descriptions|entities|rich-transcripts|face-analysis|metadata] [--describe full|speech|light|<comma-list>] [--description <text>] [--prompt <text> | --schema <file>] --json
+tinycloud library collections create <name> [--type media-descriptions|entities|rich-transcripts|face-analysis|metadata|moments] [--describe full|speech|light|<comma-list>] [--description <text>] [--prompt <text> | --schema <file>] [--name <criterion> --instructions "<rubric>" | --criterion <json|file.json>] --json
 tinycloud library collections add <source> --to <col_id> [--metadata '<json|file.json>'] [--no-upload] [--no-download] --json
 tinycloud library collections remove <source> --from <col_id> --json
 tinycloud library collections delete <col_id> --json
@@ -372,7 +460,9 @@ read-only `library` (gated by the `library.collections.create.v1` /
 `--type media-descriptions`; an `entities` collection also needs an extraction
 spec — `--prompt <text>` or `--schema <file.json>` — or `create` errors, and a
 `metadata` collection takes NO processing configs (`create` rejects
-`--prompt`/`--schema`).
+`--prompt`/`--schema`); a `moments` collection REQUIRES at least one criterion
+(`--name`/`--instructions`, or `--criterion` with an object or array) — see
+[moments](#moments--find-every-moment-that-meets-a-rubric-cloud-0323).
 
 **A media-descriptions collection indexes only the modalities chosen at
 create time, and the API default is speech+summary ONLY** — no visual scene

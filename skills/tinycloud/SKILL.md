@@ -151,6 +151,14 @@ tinycloud library imports show col_meta <import-id> --json           # poll: pen
 tinycloud library imports create col_meta --name "dbx tree" --connector <id> --path /recordings --recursive --enrich-metadata --json  # 0.3.22+
 tinycloud library imports create col_desc --name "corpus" --connector <id> --max-files 50 --json   # 0.3.22+ MEDIA import — ask the user first, it bills per file
 
+# Find Moments (0.3.23+) — sweep a WHOLE video against a rubric you wrote:
+tinycloud moments ./earnings.mp4 --name guidance_changes --instructions "A moment where guidance is revised." --json
+tinycloud moments show <job-id> --limit 5 --sort start --json     # read-time shaping; total_moments stays whole
+# A standing rubric over many videos (criteria run over every current AND future member):
+tinycloud library collections create "sales-calls" --type moments --name objection_handling --instructions "…" --json
+tinycloud library moments list col_m --criterion objection_handling --sort criterion-score --json
+tinycloud moments search "annual pricing" --in collection:col_m --json
+
 # Publish an HTML artifact to Cloudglue Sites (manage with list / unpublish)
 tinycloud publish ./tinycloud-output/html/report.html --name report --visibility private --json
 tinycloud publish list --json
@@ -256,6 +264,26 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   backfills fields the connector listing omits — Gong parties + Call
   Spotlight (re-embedded, so they become searchable) and Dropbox
   `media_info` duration/dimensions.
+- `moments` (0.3.23+) is the fourth retrieval shape and the easiest to confuse:
+  `probe`/`ask` FIND content semantically, `extract` pulls declared fields from
+  known places, `search` greps cached context locally, and **`moments` measures
+  a whole video against a rubric you wrote**, persisting every window that
+  qualifies. A criterion is `--name` (lowercase snake_case) + `--instructions`;
+  `--criterion '<json|file.json>'` adds `moment_schema` / `finding_schema` /
+  `anchors` / one `scoring` key. Three things to get right:
+  **(1) `--limit`/`--min-score`/`--sort` shape the READ, not the result** —
+  every accepted moment stays persisted and `total_moments` reports the full
+  count, so re-read the same run with `moments show` rather than re-running.
+  **(2) On a collection, `--sort criterion-score|rank` REQUIRES `--criterion
+  <name>`** — scores only compare within one rubric. **(3) Detaching a
+  criterion (or removing a file) drops moments from collection enumeration,
+  not from existence** — the runs persist as job history.
+  A moments COLLECTION needs at least one criterion at create. Attaching a
+  criterion is free; the per-file backfill runs it starts are billed as they
+  execute, so ask the user before attaching one to a large collection. Search
+  moments with `moments search`, NOT `probe --scope moment` (probe runs on deep
+  search, which has only file and segment scopes); `query` has no moments
+  tables yet.
 - `query` (0.3.17+) is for analytics, not search: when the task is to COUNT,
   GROUP, rank, or join across a collection ("how many…", "which … most",
   "total hours per host"), reach for `query`, not `probe`/`ask`. Run `query
