@@ -103,7 +103,7 @@ stdout (logs on stderr) with `status`:
 → exit codes 0/0/2/3/3/0/1. `tinycloud commands --json` is the authoritative
 flag list — verify doc claims against it, not memory (a doc bug shipped once
 because `--cached` only exists on watch/see/extract/caption/face/workflow). As
-of 0.3.23 there are 18 verbs (0.3.17 added `query`, 0.3.23 added
+of 0.3.24 there are 18 verbs (0.3.17 added `query`, 0.3.23 added
 `moments`): `see`
 (0.3.7+) analyzes an **image** (file-level,
 JPEG/PNG/WebP — the image counterpart of `watch`) and `extract` also takes
@@ -421,6 +421,47 @@ v0.7.23 `query` has no moments virtual tables and `ask`/responses have no
 moment awareness. Because the skill teaches the verb, the floor was raised to
 0.3.23 (same merge-after-CDN gate — the dist PR merges only after CDN
 `channels.stable` = 0.3.23).
+0.3.24 picks up SDK 0.7.32 and adds **per-route unfurl previews** (features
+52→53: `publish.link.preview.routes.v1`; verbs stay 18, no new subcommand
+family). The SDK gains a `sites` namespace — the first Sites routes it covers,
+so `lib/cloudglue-sites.ts` now talks to the SDK for these three calls
+(list/replace/delete route previews) while site create/version/activate stay on
+its raw `fetch` client, which the SDK still does not cover. Where 0.3.20's
+`--preview-share` gives a whole SITE one hero share, `publish` now takes
+`--route-previews '<json|file>'`: the site's COMPLETE set of per-page
+previews, each entry `{route, preview_share_id, preview_title?,
+preview_description?, preview_image_url?, start_seconds?, end_seconds?}`. A
+single-page site whose pages are routes (`#/clip/intro`, `#/clip/deep-dive`)
+otherwise unfurls every route with the same site-level card; now each route
+gets its own hero, card overrides, and an optional clip window that makes the
+unfurled Slack player play exactly that moment (served with Mux instant
+clipping, which trims at HLS segment boundaries — the stream can run up to one
+segment wider per side, the poster is the exact `start_seconds` frame). Card
+fields fall back per field to the hero share's own title (then filename),
+description, and thumbnail, so most routes need only
+`{route, preview_share_id}`. THE SET IS REPLACED WHOLESALE (an `[]` clears it;
+omitting the flag leaves it alone — `data.route_previews` is emitted ONLY when
+the run wrote it, so an absent key is "left alone" and `[]` is "cleared"), and
+routes are stored CANONICALLY (`#/` prefix, query string, and surrounding
+slashes stripped, so `#/clip/intro` == `/clip/intro` == `clip/intro/` and may
+appear once; the site root is rejected). tinycloud validates the whole set
+client-side before any upload — duplicate canonical routes, a non-uuid hero, a
+half-open or backwards window, a non-http(s) card image, an unknown field, and
+a non-array payload each fail fast naming the offending route, because the API
+answers several of these with a bare "invalid request". `--route-previews`
+requires `--link-preview player` (every entry names a hero, and heroes only
+play in playable unfurls) and is site-only (`publish video` rejects it at the
+router). A route-preview-only run on unchanged content is the `settings-only`
+action with no re-upload and no site PATCH. Heroes must be same-account video
+shares — public shares on a public site — and the same consent rule applies
+per route: anyone who can see the Slack message can play what a route's hero
+points at. The SDK bump also relaxes `responses.createResponse`
+(`collections` optional for an entity/moments-only
+`entity_backed_knowledge` base), which tinycloud does not use — `ask`/`probe`
+build a plain `source: "collections"` knowledge base — so nothing changed
+there. Because the skill teaches the flag, the floor was raised to 0.3.24
+(same merge-after-CDN gate — the dist PR merges only after CDN
+`channels.stable` = 0.3.24).
 The host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
@@ -473,9 +514,9 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.23 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0 through 0.3.23, with `manifest.json` + `.sha256`
-  sidecars; `channels.stable` = 0.3.23); all smoke legs are required.
+- The live CDN serves 0.3.24 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0 through 0.3.24, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.24); all smoke legs are required.
 - `ci.yml` also pins every version field to `package.json`: plugin.json,
   marketplace.json (metadata + each plugin entry), and tinycloud-skill.json's
   `skill_version`. The plugin metadata had silently drifted to 0.3.19 through

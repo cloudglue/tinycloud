@@ -687,7 +687,7 @@ tinycloud workflow <name> <source> [--param k=v] [--segment <s>] [--out <dir>]
 tinycloud publish <html-file-or-dir> [--name <site-name>]
   [--visibility public|private]
   [--link-preview none|full|player] [--preview-title <text>] [--preview-image <url>]
-  [--preview-share <share-id>] --json
+  [--preview-share <share-id>] [--route-previews '<json|file>'] --json
 tinycloud publish list --json                       # sites for this account, with URLs
 tinycloud publish unpublish <site-ref> --json       # site_id, site name, or the --name label
 ```
@@ -763,6 +763,50 @@ dashboard (Settings → Slack) — everywhere else the link falls back to the
 ordinary card. ⚠️ Anyone who can see the Slack message can play the video —
 ask the user before opting private content in. Downgrading to `full`/`none`
 revokes playback in already-posted unfurls (posted cards are not retracted).
+
+**Per-route unfurl previews (0.3.24+, `publish.link.preview.routes.v1`)** —
+a site's pages are usually routes of one HTML document (`#/clip/intro`,
+`#/clip/deep-dive`, …), and by default every one of them unfurls with the
+SAME site-level card and hero. `--route-previews` gives each route its own:
+
+```bash
+tinycloud publish ./site --link-preview player --route-previews '[
+  {"route":"#/clip/intro","preview_share_id":"<share-id>","preview_title":"Intro"},
+  {"route":"#/clip/deep-dive","preview_share_id":"<share-id>","start_seconds":12,"end_seconds":47}
+]' --json
+
+tinycloud publish ./site --link-preview player --route-previews ./routes.json --json
+tinycloud publish ./site --link-preview player --route-previews '[]' --json   # clear them all
+```
+
+Each entry takes `route` and `preview_share_id` (required) plus optional
+`preview_title`, `preview_description`, `preview_image_url`, and a
+`start_seconds`/`end_seconds` pair that makes the unfurled player play exactly
+that clip. Card fields fall back per field to the hero share's own title (then
+filename), description, and thumbnail, so most routes need only
+`{route, preview_share_id}`.
+
+⚠️ **The set is replaced wholesale.** Pass the COMPLETE list every publish — a
+partial list drops the routes you left out. `'[]'` clears every route preview;
+omitting the flag leaves the stored set untouched. Routes match **canonically**
+(the `#/` prefix, the query string, and surrounding slashes are stripped), so
+`#/clip/intro`, `/clip/intro`, and `clip/intro/` name one route and may appear
+only once; the site root is rejected (it always uses the site-level fields).
+Heroes must be same-account video shares — on a **public** site, public shares.
+The clip window is served with instant clipping that trims at HLS segment
+boundaries, so the stream can run up to one segment wider per side than the
+window (the poster is the exact `start_seconds` frame); both bounds or neither,
+`end_seconds` > `start_seconds`.
+
+`--route-previews` requires `--link-preview player` and is **site-only**
+(`publish video` rejects it). ⚠️ Same consent rule per route: anyone who can
+see the Slack message can play what that route's hero points at — ask the user
+first. The written set comes back as `data.route_previews[]` (canonical
+`route`, server `id`, card/window fields), present **only** when the run wrote
+it — an absent key means "routes left alone", `[]` means "cleared". A
+route-preview-only run on unchanged content reports `action: "settings-only"`
+with no re-upload. Deleting a hero **share** reverts its routes to the
+site-level unfurl.
 
 ### publish video — share a video
 
