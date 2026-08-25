@@ -172,6 +172,7 @@ tinycloud publish video ./demo.mp4 --clip-start 18 --clip-end 33 --clip-only --j
 # Playable Slack unfurl (0.3.20+, ASK THE USER FIRST): the pasted link plays inline in Slack
 tinycloud publish video ./demo.mp4 --visibility private --link-preview player --json
 tinycloud publish ./site --link-preview player --preview-share <share-id> --json   # site link plays its hero share
+tinycloud publish ./site --link-preview player --route-previews '<json|file>' --json   # per-page hero/card/clip window
 ```
 
 Per-verb details and all flags: [reference/verbs.md](reference/verbs.md).
@@ -347,6 +348,17 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   Slack message can play the video — always ask the user before opting
   private content in; downgrading to `full`/`none` revokes playback in
   already-posted unfurls. Details in [reference/verbs.md](reference/verbs.md).
+- Per-route unfurl previews (0.3.24+): on a site whose pages are routes
+  (`#/clip/intro`, …), every route unfurls with the same site-level card by
+  default. `--route-previews '<json|file>'` gives each route its own hero
+  share, card overrides, and optional `start_seconds`/`end_seconds` clip
+  window: `[{"route":"#/clip/intro","preview_share_id":"<id>",
+  "start_seconds":12,"end_seconds":47}]`. ⚠️ The set is **replaced
+  wholesale** — pass the complete list every publish (a partial list drops
+  the rest), `'[]'` clears it, omitting the flag leaves it alone. Routes
+  match canonically (`#/clip/intro` == `/clip/intro` == `clip/intro/`).
+  Requires `--link-preview player`, site-only, and the same consent rule
+  applies per route. Details in [reference/verbs.md](reference/verbs.md).
 - Live-API components (0.3.6+; the fuller v8–v12 surface is taught from
   0.3.18): the same embed script also defines collection-scoped,
   **private-site-only** elements that let viewers search/chat/query inside a

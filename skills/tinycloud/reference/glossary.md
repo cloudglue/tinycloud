@@ -169,6 +169,16 @@ connector?" or an envelope field needs explaining.
   sites also take `--preview-title` / `--preview-image`). Opting in makes those
   card fields publicly readable — content and playback stay sign-in gated — so
   ask the user first. See reference/verbs.md.
+- **Route preview (0.3.24+, `publish.link.preview.routes.v1`)** — a per-page
+  override of a site's link preview, so each route of a single-page site
+  (`#/clip/intro`, `#/clip/deep-dive`, …) unfurls with its own hero share,
+  card fields, and optional clip window instead of the site-level ones.
+  Written with `--route-previews '<json|file>'` on `publish` (requires
+  `--link-preview player`; site-only). The set is **replaced wholesale** on
+  every write, routes are stored **canonically** (the `#/` prefix, query
+  string, and surrounding slashes stripped, so `#/clip/intro` and
+  `/clip/intro/` are one route), and a route with no entry falls back to the
+  site-level preview fields. See reference/verbs.md.
 - **Live-API components (0.3.6+; v8–v12 surface taught from 0.3.18)** — the
   same embed script also defines collection-scoped, **private-site-only**
   elements that let a viewer search, chat, query, or read a transcript inside
