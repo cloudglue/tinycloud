@@ -755,7 +755,8 @@ not retract already-posted cards.
 **inline player** (via the Cloudglue Slack app; other platforms still show
 the card). It implies the `full` card, so every card rule above applies. A
 site plays its **hero share**, set with `--preview-share <share-id>` (a share
-id from `publish video`; without one the unfurl stays card-only; pass `""` to
+id from `publish video`; without one the **site link** unfurls card-only —
+per-route heroes are set separately, see `--route-previews` below; pass `""` to
 clear). Unlike `full`, `player` matters on **both** visibilities: a public
 site's hero must be a **public** share, and a private site's hero plays only
 in Slack workspaces the account owner has connected in the Cloudglue
