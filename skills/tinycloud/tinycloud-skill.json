@@ -1,12 +1,13 @@
 {
-  "skill_version": "0.3.24",
+  "skill_version": "0.3.25",
   "tinycloud": {
-    "min_version": "0.3.24",
-    "supported_range": ">=0.3.24 <0.4.0",
+    "min_version": "0.3.25",
+    "supported_range": ">=0.3.25 <0.4.0",
     "required_features": [
       "envelope.v1",
       "watch.v1",
       "watch.speech.v1",
+      "describe.prompt.v1",
       "see.v1",
       "extract.v1",
       "extract.images.v1",
@@ -29,6 +30,7 @@
       "library.collections.entities.v1",
       "library.collections.metadata.v1",
       "library.collections.describe.v1",
+      "library.collections.describe.prompt.v1",
       "library.collections.pagination.v1",
       "moments.v1",
       "moments.collections.v1",

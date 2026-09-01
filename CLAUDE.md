@@ -103,7 +103,7 @@ stdout (logs on stderr) with `status`:
 → exit codes 0/0/2/3/3/0/1. `tinycloud commands --json` is the authoritative
 flag list — verify doc claims against it, not memory (a doc bug shipped once
 because `--cached` only exists on watch/see/extract/caption/face/workflow). As
-of 0.3.24 there are 18 verbs (0.3.17 added `query`, 0.3.23 added
+of 0.3.25 there are 18 verbs (0.3.17 added `query`, 0.3.23 added
 `moments`): `see`
 (0.3.7+) analyzes an **image** (file-level,
 JPEG/PNG/WebP — the image counterpart of `watch`) and `extract` also takes
@@ -462,6 +462,39 @@ build a plain `source: "collections"` knowledge base — so nothing changed
 there. Because the skill teaches the flag, the floor was raised to 0.3.24
 (same merge-after-CDN gate — the dist PR merges only after CDN
 `channels.stable` = 0.3.24).
+0.3.25 picks up SDK 0.7.33 (spec v0.7.32) and adds **describe prompts**
+(features 53→55: `describe.prompt.v1` + `library.collections.describe.prompt.v1`;
+verbs stay 18, no new subcommand family). The SDK's one new capability is a
+free-form `prompt` on a describe — on `describe.createDescribe` and on a
+collection's `describe_config` — and tinycloud surfaces it as
+`--describe-prompt "<text>"` on `watch`, `see`, and `library collections
+create`. It is guidance, not schema: domain terms and their spellings, what to
+pay attention to, output style. It steers emphasis and vocabulary across the
+visual, scene-text, speech, and summary passes, it CANNOT make a description
+report content that is not in the media, and it never changes the envelope
+shape — so no field appears or disappears because of a prompt, and speaker
+naming stays a `participants` concern rather than something a prompt
+constrains. The cap is 2000 characters, enforced CLIENT-SIDE before any upload
+or describe because the API answers an over-long prompt with a bare 400 that
+names no field. The load-bearing detail is caching: Cloudglue keys its own
+describe cache by the prompt, so tinycloud mirrors it into the enrichment
+cache key on both `watch` and `see` — the same source under a different
+prompt, or under no prompt, is a SEPARATE run rather than a cache hit, which
+means editing prompt wording recomputes (and bills) instead of silently
+returning the previous description. Background runs register the prompted key
+on the job ledger, so reconcile writes into the same slot. The value is echoed
+back on the describe's `describe_config.prompt`. On `library collections
+create` the prompt applies when describing EVERY file in a media-descriptions
+collection and, like `--describe`, is fixed at create (the API ignores config
+updates); it may be passed ALONE, which keeps the API's default modalities
+(speech+summary) and only adds the guidance rather than silently narrowing
+what gets indexed, and the create summary reports it separately from the
+modality list because a prompt is not a sixth modality. The SDK bump also
+raises the site route-preview cap from 1000 to 20000 entries; tinycloud never
+enforced a count cap client-side (it validates routes, heroes, windows, and
+fields), so nothing changed there. Because the skill teaches the flag, the
+floor was raised to 0.3.25 (same merge-after-CDN gate — the dist PR merges
+only after CDN `channels.stable` = 0.3.25).
 The host-level `profile` verb and the leading global flags `--home`/`--profile`
 (also `$TINYCLOUD_HOME`; 0.3.3+) relocate state and are intentionally absent
 from `commands --json` — like the launcher's install/update, they're CLI/host
@@ -514,9 +547,9 @@ of printing JSON. Any script invoking the binary must redirect `</dev/null`
   metadata sync) vs live-CDN jobs (`Install + smoke` matrix, npx-against-CDN)
   which run only on push to main or manual dispatch — never on PRs, because a
   CDN gap would fail every PR.
-- The live CDN serves 0.3.24 (latest aliases + v-prefixed pinned tarballs
-  for 0.3.0 through 0.3.24, with `manifest.json` + `.sha256`
-  sidecars; `channels.stable` = 0.3.24); all smoke legs are required.
+- The live CDN serves 0.3.25 (latest aliases + v-prefixed pinned tarballs
+  for 0.3.0 through 0.3.25, with `manifest.json` + `.sha256`
+  sidecars; `channels.stable` = 0.3.25); all smoke legs are required.
 - `ci.yml` also pins every version field to `package.json`: plugin.json,
   marketplace.json (metadata + each plugin entry), and tinycloud-skill.json's
   `skill_version`. The plugin metadata had silently drifted to 0.3.19 through

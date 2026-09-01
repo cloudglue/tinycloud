@@ -109,6 +109,17 @@ connector?" or an envelope field needs explaining.
   description, on-screen text) and a reusable `ref`, with no segmentation or
   shots. JPEG/PNG/WebP only; `extract` accepts the same image sources for
   structured pulls.
+- **Describe prompt (0.3.25+, `describe.prompt.v1`)** — free-form guidance
+  attached to a describe with `--describe-prompt "<text>"` on `watch`, `see`,
+  and `library collections create` (max 2000 chars): domain terms and their
+  spellings, what to pay attention to, output style. It steers emphasis and
+  vocabulary, but is **context, not a constraint** — it cannot make a
+  description report content that is not in the media, and it never changes
+  the envelope shape. Unlike `--transcript`/`--content`, it **is part of the
+  cache key**: the same source under a different prompt (or none) is a
+  separate, newly-billed run, not a cache hit. On a collection
+  (`library.collections.describe.prompt.v1`) it applies to every file and is
+  fixed at create. See reference/verbs.md.
 - **Segmentation** — how a video is split for analysis: `chapters`
   (semantic), `shots` (visual cuts; bounds tunable via
   `--shot-min-seconds`/`--shot-max-seconds`, sub-second min allowed),

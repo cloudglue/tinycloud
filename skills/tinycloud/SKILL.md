@@ -74,8 +74,14 @@ setup` are local and free; `grab jobs` are network-only.
 # Understand a video (creates reusable cached context + cloud-ready ref)
 tinycloud watch ./demo.mp4 --json
 
+# Steer the description (0.3.25+): domain terms + spellings, what to attend to (max 2000 chars).
+# Context, NOT a constraint — it cannot surface content that isn't in the media. It changes the
+# cache key, so a new prompt recomputes instead of returning the previous description.
+tinycloud watch ./demo.mp4 --describe-prompt "Spell the product Cloudglue; call out any pricing." --json
+
 # Understand an image — the file-level counterpart of watch (0.3.7+, JPEG/PNG/WebP)
 tinycloud see ./photo.jpg --json
+tinycloud see ./photo.jpg --describe-prompt "Read every logo and label verbatim." --json   # 0.3.25+
 
 # Pipe context into structured extraction (JSONL flows between pipes)
 tinycloud watch ./demo.mp4 --json | tinycloud extract "key moments with timestamps" --json
@@ -126,6 +132,10 @@ tinycloud library collections create my-desc --type media-descriptions --describ
 # --describe full|speech|light (0.3.16+): which modalities a media-descriptions collection indexes.
 # The API default is speech+summary ONLY (no visuals/scene text) and it is IMMUTABLE after create —
 # pass --describe full when visual probe/ask queries matter. `show` reports describe_config.
+# --describe-prompt (0.3.25+): free-form guidance applied when describing EVERY file in the
+# collection (max 2000 chars), also fixed at create. Passable on its own, which keeps the API's
+# default modalities and only adds the guidance.
+tinycloud library collections create my-desc --describe full --describe-prompt "Spell it Cloudglue." --json
 tinycloud library collections add ./demo.mp4 --to col_desc --json              # uploads a local source first; enrichment is async (pending)
 tinycloud library collections show col_desc --json                            # poll files[].status until completed, then query
 # (metadata/entities rows also report files[].searchable_status, 0.3.20+ — completed = probe/ask can find the file);
@@ -229,6 +239,13 @@ Authoring your own recipes: [reference/workflow-authoring.md](reference/workflow
   added to collections. Local `search` can match cached `see` results.
 - Do not pass `--background` to `ask`; background jobs exist only for tracked
   async ops (`watch`, `see`, `extract`).
+- `--describe-prompt` (0.3.25+) **changes the cache key**, unlike
+  `--transcript`/`--content`. Re-running the same source with different prompt
+  wording is a new, newly-billed analysis rather than a cache hit — so settle
+  on the wording before iterating, and don't reach for a prompt to reshape
+  output. It steers emphasis and vocabulary only: it cannot surface content
+  that isn't in the media, and it never adds or removes envelope fields. Use
+  `extract` when you need specific fields back.
 - `probe`/`ask` scope (0.3.20+): omit `--scope` for AUTO — the search picks
   the right level for the collection (media, metadata, or entities) itself,
   so you no longer need to know a collection's type before probing it. An

@@ -57,7 +57,7 @@ tinycloud watch <source> [--segment uniform:20|chapters|shots|segments]
   [--shot-min-seconds <s>] [--shot-max-seconds <s>]
   [--profile default|light|custom] [--speech-only | --visual-only]
   [--start <t>] [--end <t>] [--transcript] [--content]
-  [--background]
+  [--describe-prompt <text>] [--background]
 ```
 
 Shot bounds tune `--segment shots` only: min 0.6–600 (fractional/sub-second
@@ -92,10 +92,28 @@ change the cache key and are served on cache hits, so asking for them never
 re-runs an analysis. `--json-index` was removed in 0.3.12 (it had long been a
 no-op; passing it now errors as an unknown flag).
 
+`--describe-prompt "<text>"` (0.3.25+, feature `describe.prompt.v1`) is
+free-form guidance for the description — domain terms and their spellings,
+what to pay attention to, output style — capped at 2000 characters and
+rejected client-side before any upload when longer. It steers emphasis and
+vocabulary across the visual, scene-text, speech, and summary passes. It is
+**context, not a constraint**: it cannot make the description report content
+that is not in the media, and it never changes the envelope shape (so no
+field appears or disappears because of a prompt). To pin down speaker naming
+use participants, not a prompt.
+
+Unlike `--transcript`/`--content`, a prompt **does** change the cache key —
+Cloudglue keys its own describe cache by the prompt and tinycloud mirrors
+that. The same source under a different prompt, or under no prompt, is a
+separate run rather than a cache hit, so editing a prompt recomputes instead
+of returning the previous description. Budget for that: iterating on prompt
+wording bills a new analysis each time. The value comes back on the
+describe's `describe_config.prompt`.
+
 ### see — analyze an image (cloud, 0.3.7+)
 
 ```bash
-tinycloud see <image> [--visual-only] [--background] --json
+tinycloud see <image> [--visual-only] [--describe-prompt <text>] [--background] --json
 ```
 
 The image counterpart of `watch`: file-level image understanding (title +
@@ -111,6 +129,9 @@ A local image uploads first (`needs_upload` without `--no-upload`); a public
 place — no upload** (a URL that can't be recognized as a direct image returns
 `needs_download` — fetch it first with `grab`). Results cache by source +
 options, so re-runs are free.
+
+`--describe-prompt "<text>"` (0.3.25+) works exactly as it does on `watch` —
+free-form guidance, max 2000 chars, part of the cache key.
 
 ### extract — structured facts (video or image)
 
@@ -431,7 +452,7 @@ tinycloud library collections list --json
 tinycloud library collections show <col_id> [--limit <n>] [--page-token <t>] --json   # files[].status: pending|processing|completed (readiness)
 tinycloud library collections sync <col_id> --artifacts descriptions,transcripts,thumbnails,metadata --json
 # Collection writes (0.3.4+) — the only write paths in library:
-tinycloud library collections create <name> [--type media-descriptions|entities|rich-transcripts|face-analysis|metadata|moments] [--describe full|speech|light|<comma-list>] [--description <text>] [--prompt <text> | --schema <file>] [--name <criterion> --instructions "<rubric>" | --criterion <json|file.json>] --json
+tinycloud library collections create <name> [--type media-descriptions|entities|rich-transcripts|face-analysis|metadata|moments] [--describe full|speech|light|<comma-list>] [--describe-prompt <text>] [--description <text>] [--prompt <text> | --schema <file>] [--name <criterion> --instructions "<rubric>" | --criterion <json|file.json>] --json
 tinycloud library collections add <source> --to <col_id> [--metadata '<json|file.json>'] [--no-upload] [--no-download] --json
 tinycloud library collections remove <source> --from <col_id> --json
 tinycloud library collections delete <col_id> --json
@@ -475,7 +496,18 @@ comma list from `speech,visual,scene-text,audio,summary`. The choice is
 **immutable after create** (the API ignores config updates), so pass
 `--describe full` up front when visual search matters; `collections show`
 reports the collection's `describe_config`, and the create summary names the
-indexed modalities. `add`
+indexed modalities.
+
+`--describe-prompt "<text>"` (0.3.25+, feature
+`library.collections.describe.prompt.v1`) adds free-form guidance — domain
+terms and their spellings, what to pay attention to — applied when describing
+EVERY file in the collection (max 2000 chars). It is fixed at create like
+`--describe`, and it may be passed on its own: doing so keeps the Cloudglue
+API's default modalities and only adds the guidance, rather than silently
+narrowing what gets indexed. It comes back inside `describe_config`, and the
+create summary reports it separately from the modality list. Both flags are
+media-descriptions-only; on any other `--type` they error, naming the flag you
+actually passed. `add`
 (`--to <col>`, or `--collection`) resolves the source like `watch`/`extract` —
 a local file uploads first (or `needs_upload` with `--no-upload`) — and records
 the file→collection mapping; `--metadata '<json|file.json>'` (0.3.15+)
